@@ -1,0 +1,25 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.DS_Store": true,
+        "**/node_modules": true,
+        "**/dist": true
+    },
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 4,
+    "editor.detectIndentation": false,
+    "files.eol": "\n",
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 500,
+    "prettier.configPath": ".prettierrc",
+    "prettier.requireConfig": true,
+    "eslint.validate": ["typescript", "javascript"],
+    "[snippets]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    }
+}
