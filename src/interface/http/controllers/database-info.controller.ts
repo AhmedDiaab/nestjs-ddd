@@ -1,8 +1,7 @@
 import { GetDatabaseInfoUseCase } from '@application/use-cases';
 import type { JWTPayload } from '@domain/auth';
 import { CurrentUser } from '@interface/http/decorators';
-import { JwtGuard } from '@interface/http/guards';
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiBearerAuth, ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 import { BEARER_SECURITY, COOKIE_SECURITY } from '../swagger/swagger.constants';
 
@@ -14,8 +13,7 @@ import { BEARER_SECURITY, COOKIE_SECURITY } from '../swagger/swagger.constants';
 @ApiTags('examples')
 @ApiBearerAuth(BEARER_SECURITY)
 @ApiCookieAuth(COOKIE_SECURITY)
-@UseGuards(JwtGuard)
-@Controller('database-info')
+@Controller('database-info') // protected by the global JwtGuard; no @Public() here
 export class DatabaseInfoController {
     constructor(private readonly getDatabaseInfo: GetDatabaseInfoUseCase) {}
 

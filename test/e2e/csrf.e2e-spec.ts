@@ -1,3 +1,4 @@
+import { Public } from '@interface/http/decorators';
 import { Controller, HttpCode, Post, VersioningType, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
@@ -5,7 +6,9 @@ import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 
-/** Test-only write route; the guard runs before auth, so no valid token is needed here. */
+/** Test-only write route; the CSRF guard runs before authentication, so `@Public()` keeps
+ * the global JWT guard out of the way and the cookie alone drives the check. */
+@Public()
 @Controller('e2e-csrf')
 class WriteProbeController {
     @Post()

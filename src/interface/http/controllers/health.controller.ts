@@ -2,6 +2,7 @@ import type { ConfigPort } from '@application/ports';
 import { ConfigPortToken } from '@application/ports';
 import { ConnectionProviderToken } from '@infrastructure/database/connection';
 import type { ConnectionProvider } from '@infrastructure/database/contracts';
+import { Public } from '@interface/http/decorators';
 import {
     Controller,
     Get,
@@ -13,6 +14,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('health')
+@Public() // monitors and load balancers poll these without a token
 @SkipThrottle()
 @Controller({ path: 'health', version: VERSION_NEUTRAL })
 export class HealthController {

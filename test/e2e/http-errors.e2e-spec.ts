@@ -1,6 +1,6 @@
 import { ConnectionProviderToken } from '@infrastructure/database/connection';
 import type { SourceHealth } from '@infrastructure/database/contracts';
-import { UseZodHttp, Validated } from '@interface/http/decorators';
+import { Public, UseZodHttp, Validated } from '@interface/http/decorators';
 import { Controller, Get, VersioningType, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
@@ -14,6 +14,7 @@ type ErrorEnvelope = {
 };
 
 /** Test-only route: the template ships no validated endpoint of its own. */
+@Public() // authentication is global; this probe is about validation, not auth
 @Controller('e2e-validation')
 class ValidationProbeController {
     @Get()
