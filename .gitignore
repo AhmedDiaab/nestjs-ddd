@@ -41,6 +41,7 @@ lerna-debug.log*
 # dotenv environment variable files (negation must come after the pattern it overrides)
 .env*
 !.env.example
+!.env.docker.example
 
 # temp directory
 .temp

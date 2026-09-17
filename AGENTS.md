@@ -19,6 +19,7 @@ NestJS 11 layered/DDD API template: TypeScript 5 (strict), Express 5, Zod 4, nod
 | E2E tests                                               | `pnpm test:e2e`                                          |
 | Build                                                   | `pnpm build`                                             |
 | Run locally                                             | `pnpm start:dev` (needs `.env.development`)              |
+| Run with Docker (API + Oracle)                          | `docker compose --env-file .env.docker up --build`       |
 
 Jest does **not** type-check; `pnpm typecheck` does. `pnpm verify` runs everything.
 

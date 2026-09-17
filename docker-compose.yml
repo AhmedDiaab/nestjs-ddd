@@ -1,0 +1,61 @@
+# Local stack: API + Oracle Database Free.
+#
+#   cp .env.docker.example .env.docker   # set JWT_SECRET and passwords
+#   docker compose --env-file .env.docker up --build
+#
+# API: http://localhost:3000/v1  health: /health, /health/ready  docs: /docs (SWAGGER_ENABLED=true)
+# Not a production deployment: the database runs in a container with a local volume.
+
+name: nestjs-ddd
+
+services:
+    api:
+        build:
+            context: .
+            target: runtime
+        image: nestjs-ddd:local
+        init: true
+        restart: unless-stopped
+        # longer than the DB pool drainTimeSec (default 10 s) so shutdown hooks can finish
+        stop_grace_period: 20s
+        ports:
+            - '${API_PORT:-3000}:3000'
+        environment:
+            NODE_ENV: ${NODE_ENV:-production}
+            PORT: 3000
+            LOG_LEVEL: ${LOG_LEVEL:-info}
+            LOGGING_TO_FILE: 'false'
+            JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET (min 32 chars) in .env.docker}
+            CORS_ORIGINS: ${CORS_ORIGINS:-}
+            SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+            THROTTLE_LIMIT: ${THROTTLE_LIMIT:-100}
+            DATABASE_CONFIG_JSON: >-
+                [{"key":"main","dialect":"oracle","connectString":"oracle:1521/FREEPDB1",
+                "user":"${ORACLE_APP_USER:-app}","passwordEnv":"MAIN_DB_PASSWORD",
+                "poolMin":1,"poolMax":${DB_POOL_MAX:-5},"expireTimeMin":5}]
+            MAIN_DB_PASSWORD: ${ORACLE_APP_PASSWORD:?set ORACLE_APP_PASSWORD in .env.docker}
+            DATABASE_PING_MAX_RETRIES: 5
+        depends_on:
+            oracle:
+                condition: service_healthy
+
+    oracle:
+        image: gvenzl/oracle-free:23-slim-faststart
+        restart: unless-stopped
+        ports:
+            - '${ORACLE_PORT:-1521}:1521'
+        environment:
+            ORACLE_PASSWORD: ${ORACLE_PASSWORD:?set ORACLE_PASSWORD in .env.docker} # SYS/SYSTEM
+            APP_USER: ${ORACLE_APP_USER:-app} # created in FREEPDB1 on first start
+            APP_USER_PASSWORD: ${ORACLE_APP_PASSWORD:?set ORACLE_APP_PASSWORD in .env.docker}
+        volumes:
+            - oracle-data:/opt/oracle/oradata
+        healthcheck:
+            test: ['CMD', 'healthcheck.sh']
+            interval: 10s
+            timeout: 5s
+            retries: 30
+            start_period: 30s
+
+volumes:
+    oracle-data:

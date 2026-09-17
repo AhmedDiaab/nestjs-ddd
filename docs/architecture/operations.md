@@ -19,6 +19,56 @@ NODE_ENV=production node dist/main  # or: pnpm start:prod with NODE_ENV set in t
 | `pnpm start:repl`  | Nest REPL with history (`.nest_repl_history`) |
 | `pnpm start:prod`  | `node dist/main` (no forced `NODE_ENV`)       |
 
+## Docker
+
+Files: `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `.env.docker.example`.
+
+### Image
+
+Multi-stage build on `node:22.18.0-bookworm-slim` (glibc, so Oracle thick mode stays possible):
+
+| Stage       | Does                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------- |
+| `build`     | `pnpm install --frozen-lockfile` (pnpm via corepack, version from `packageManager`), `pnpm build` |
+| `prod-deps` | production dependencies only (`--prod --ignore-scripts`)                                          |
+| `runtime`   | `node_modules` + `dist` + `package.json`, runs as user `node`, `CMD ["node", "dist/main.js"]`     |
+
+Runtime defaults:
+
+- `NODE_ENV=production`, `PORT=3000`, `LOGGING_TO_FILE=false` (logs to stdout as JSON).
+- No `.env` files are copied: all configuration comes from environment variables.
+- `HEALTHCHECK` calls `GET /health` (liveness).
+- Exec-form `CMD`, so `SIGTERM` reaches Node and the shutdown hooks drain DB pools. Give the orchestrator a stop grace period above `drainTimeSec`.
+
+```bash
+docker build -t nestjs-ddd .
+docker run --rm -p 3000:3000 -e JWT_SECRET=<32+ chars> nestjs-ddd        # no database
+```
+
+File logging in a container: set `LOGGING_TO_FILE=true` and mount a volume at `/app/logs`.
+
+### Local stack (API + Oracle)
+
+```bash
+cp .env.docker.example .env.docker      # set JWT_SECRET, ORACLE_PASSWORD, ORACLE_APP_PASSWORD
+docker compose --env-file .env.docker up --build
+```
+
+| Service  | Image                                        | Notes                                                                                                                                                   |
+| -------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api`    | built from `Dockerfile` (`nestjs-ddd:local`) | port `API_PORT` (3000); `DATABASE_CONFIG_JSON` points at `oracle:1521/FREEPDB1`; starts after the DB is healthy; `init: true`; `stop_grace_period: 20s` |
+| `oracle` | `gvenzl/oracle-free:23-slim-faststart`       | port `ORACLE_PORT` (1521); creates `ORACLE_APP_USER` in `FREEPDB1` on first start; data in volume `oracle-data`                                         |
+
+- Compose refuses to start without `JWT_SECRET`, `ORACLE_PASSWORD` and `ORACLE_APP_PASSWORD`.
+- `.env.docker` is gitignored; only `.env.docker.example` is committed.
+- The app schema is empty: create your tables as the app user (e.g. `sql app/<password>@localhost:1521/FREEPDB1`), or mount SQL into the Oracle container's `/container-entrypoint-initdb.d`.
+- Check it's running:
+    - `GET http://localhost:3000/health/ready` should list `main` with `ok: true`.
+    - `GET /v1/database-info` with a JWT shows the `CLIENT_IDENTIFIER` the database saw.
+- Reset the database: `docker compose --env-file .env.docker down -v` (deletes the volume).
+
+This stack is for local development and integration testing, not a production deployment.
+
 ## Health endpoints
 
 For uptime monitors, load balancers and orchestrators. No auth, not rate limited, version neutral, successful polls not logged.

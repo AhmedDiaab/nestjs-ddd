@@ -23,6 +23,13 @@ pnpm verify                         # typecheck, lint, cycles, unit + e2e tests,
 
 Requires Node.js ≥ 22.18 and pnpm 10. With `DATABASE_CONFIG_JSON` unset, the app runs without a database.
 
+With Docker (API + Oracle Database Free):
+
+```bash
+cp .env.docker.example .env.docker   # set JWT_SECRET and the Oracle passwords
+docker compose --env-file .env.docker up --build
+```
+
 ## Documentation
 
 **[docs/README.md](docs/README.md)** routes you to the right document:
@@ -42,4 +49,5 @@ Requires Node.js ≥ 22.18 and pnpm 10. With `DATABASE_CONFIG_JSON` unset, the a
 | `pnpm verify`                                              | full quality gate                                                                             |
 | `pnpm typecheck` / `lint` / `lint:test` / `check:circular` | individual checks                                                                             |
 | `pnpm test` / `test:e2e` / `test:cov`                      | tests                                                                                         |
+| `docker compose --env-file .env.docker up --build`         | API + Oracle locally ([Operations](docs/architecture/operations.md#docker))                   |
 | `.\start-service.ps1` / `.\stop-service.ps1`               | Windows service via NSSM ([Operations](docs/architecture/operations.md#windows-service-nssm)) |

@@ -1,0 +1,32 @@
+# dependencies and build output are recreated inside the image
+node_modules
+dist
+coverage
+logs
+
+# local secrets and editor/agent state
+.env*
+!.env.example
+.git
+.gitignore
+.vscode
+.idea
+.claude
+.DS_Store
+
+# not needed to build or run
+test
+docs
+*.md
+!README.md
+jest.config.ts
+eslint.config.mjs
+.prettierrc
+.madgerc
+.editorconfig
+.nvmrc
+*.ps1
+docker-compose*.yml
+Dockerfile
+.dockerignore
+.nest_repl_history

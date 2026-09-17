@@ -18,6 +18,7 @@ Start here. Each link is one focused document.
 | Connect another database / schema                     | [Add a database source](guides/add-database-source.md)                        |
 | Implement Postgres, MySQL…                            | [Implement a database dialect](guides/add-database-dialect.md)                |
 | Test any of the above                                 | [Write tests](guides/write-tests.md)                                          |
+| Run it in Docker (with a local Oracle)                | [Operations → Docker](architecture/operations.md#docker)                      |
 | Run it as a Windows service or wire a monitoring tool | [Operations](architecture/operations.md)                                      |
 | Work on this repo with an AI agent                    | [`AGENTS.md`](../AGENTS.md) and [Agentic development](agentic-development.md) |
 

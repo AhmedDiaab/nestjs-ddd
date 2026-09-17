@@ -20,7 +20,7 @@ Adding a variable: [Add a config variable](../guides/add-config-variable.md).
 ## `.env` syntax notes
 
 - Quote JSON values with single quotes: unquoted values are cut at the first `#`.
-- Inline comments after unquoted values are allowed (`PORT=3000 # comment`).
+- Put comments on their own lines. dotenv accepts `PORT=3000 # comment`, but Docker/Compose env files read `KEY=  # comment` as the value `# comment`.
 - `.env.example` documents every variable and is committed; all other `.env*` files are gitignored.
 
 ## Variables
