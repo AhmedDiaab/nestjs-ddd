@@ -12,8 +12,6 @@
     "quoteProps": "as-needed",
     "proseWrap": "preserve",
     "embeddedLanguageFormatting": "auto",
-    "importOrderSeparation": true,
-    "importOrderSortSpecifiers": true,
     "importOrder": ["^(node:.*)$", "^[^./].*$", "^@nestjs/(.*)$", "^@/(.*)$", "^~/(.*)$", "^[./]"],
     "importOrderParserPlugins": ["typescript", "decorators-legacy"]
 }
