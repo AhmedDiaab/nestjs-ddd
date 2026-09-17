@@ -58,7 +58,7 @@ export class OracleClient implements DatabaseClient {
         try {
             return await fn(this.withExecuteDefaults(connection, options?.tag) as C);
         } catch (e) {
-            throw mapOracleError(e, this.sourceKey, options?.tag);
+            throw this.mapError(e, options?.tag);
         } finally {
             await this.release(connection, !!contextUser);
         }
@@ -86,6 +86,10 @@ export class OracleClient implements DatabaseClient {
                 throw e;
             }
         }, options);
+    }
+
+    mapError(error: unknown, tag?: string): unknown {
+        return mapOracleError(error, this.sourceKey, tag);
     }
 
     async ping(timeoutMs = 3000): Promise<void> {

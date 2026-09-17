@@ -1,3 +1,4 @@
+import { ConflictError } from '@application/errors';
 import type { LoggerPort } from '@application/ports';
 import { databaseConfigSchema } from '@infrastructure/config/schemas';
 import { PoolManager } from '@infrastructure/database/connection';
@@ -200,6 +201,27 @@ describe('PoolManager', () => {
             // Assert
             expect(pool.getConnection).toHaveBeenCalledTimes(1);
             expect(connection.commit).toHaveBeenCalledTimes(1);
+        });
+
+        it('maps driver errors from joined calls like normal calls', async () => {
+            // Arrange
+            const duplicate = Object.assign(new Error('ORA-00001: unique constraint'), {
+                code: 'ORA-00001',
+            });
+            let seen: unknown;
+            const work = async () => {
+                try {
+                    await sut.transaction('main', () => Promise.reject(duplicate));
+                } catch (e) {
+                    seen = e;
+                }
+            };
+
+            // Act
+            await sut.runInTransaction('main', work);
+
+            // Assert
+            expect(seen).toBeInstanceOf(ConflictError);
         });
 
         it('stops sharing the connection once the unit has finished', async () => {

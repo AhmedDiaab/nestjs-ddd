@@ -110,7 +110,7 @@ export class PoolManager implements ConnectionProviderContract, OnModuleDestroy 
         options?: ConnectionOptions,
     ): Promise<T> {
         const joined = this.joinedConnection<C>(sourceKey);
-        if (joined) return fn(joined.connection);
+        if (joined) return this.runJoined(sourceKey, joined.connection, fn, options);
         return this.client(sourceKey).withConnection(fn, options);
     }
 
@@ -121,7 +121,7 @@ export class PoolManager implements ConnectionProviderContract, OnModuleDestroy 
     ): Promise<T> {
         // inside runInTransaction: join the outer transaction, which commits or rolls back once
         const joined = this.joinedConnection<C>(sourceKey);
-        if (joined) return fn(joined.connection);
+        if (joined) return this.runJoined(sourceKey, joined.connection, fn, options);
         return this.client(sourceKey).transaction(fn, options);
     }
 
@@ -144,6 +144,20 @@ export class PoolManager implements ConnectionProviderContract, OnModuleDestroy 
             active.set(sourceKey, connection);
             return this.activeTransactions.run(active, work);
         }, options);
+    }
+
+    /** Joined calls get the same error mapping as a normal call (e.g. ORA-00001 → ConflictError). */
+    private async runJoined<T, C>(
+        sourceKey: string,
+        connection: C,
+        fn: (conn: C) => Promise<T>,
+        options?: ConnectionOptions,
+    ): Promise<T> {
+        try {
+            return await fn(connection);
+        } catch (e) {
+            throw this.client(sourceKey).mapError(e, options?.tag);
+        }
     }
 
     private joinedConnection<C>(sourceKey: string): { connection: C } | undefined {

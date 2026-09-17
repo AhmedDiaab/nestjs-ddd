@@ -20,6 +20,10 @@ export class NotImplementedClient implements DatabaseClient {
         return Promise.reject(new UnsupportedDialectError(this.sourceKey, this.dialect));
     }
 
+    mapError(error: unknown): unknown {
+        return error;
+    }
+
     ping(): Promise<void> {
         return Promise.reject(new UnsupportedDialectError(this.sourceKey, this.dialect));
     }

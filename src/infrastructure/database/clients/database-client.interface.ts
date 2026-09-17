@@ -7,6 +7,8 @@ export interface DatabaseClient {
     withConnection<T, C>(fn: (conn: C) => Promise<T>, options?: ConnectionOptions): Promise<T>;
     /** Runs `fn` on one connection; commits on success, rolls back on error. */
     transaction<T, C>(fn: (conn: C) => Promise<T>, options?: ConnectionOptions): Promise<T>;
+    /** Translates a driver error into the app's error types (as withConnection does). */
+    mapError(error: unknown, tag?: string): unknown;
     close(): Promise<void>;
     ping(timeoutMs?: number): Promise<void>;
     stats(): PoolStats | undefined;
