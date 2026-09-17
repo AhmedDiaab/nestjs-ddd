@@ -285,7 +285,7 @@ Mock `ConnectionProvider`. `withConnection`/`transaction` just invoke the callba
 // test/unit/infrastructure/database/repositories/oracle-ticket.repository.spec.ts
 import { Ticket, TicketTitle } from '@domain';
 import type { ConnectionProvider } from '@infrastructure/database/contracts';
-import { OracleTicketRepository } from '@infrastructure/database/repositories/oracle-ticket.repository';
+import { OracleTicketRepository } from '@infrastructure/database/repositories';
 
 describe('OracleTicketRepository', () => {
     const connection = { execute: jest.fn() };

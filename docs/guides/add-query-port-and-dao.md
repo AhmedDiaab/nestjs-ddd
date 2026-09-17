@@ -181,6 +181,8 @@ ProviderFactory.factory(
 // exports: [..., TicketQueryPortToken]
 ```
 
+Import the DAO through `src/infrastructure/database/queries/index.ts` (add `export { TicketQueryDao } from './ticket-query.dao';`).
+
 ## 4. Test
 
 Mock `ConnectionProvider`; assert SQL fragments, binds and paging math. See [Write tests → adapters](write-tests.md#infrastructure-adapters).

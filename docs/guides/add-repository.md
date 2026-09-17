@@ -184,7 +184,7 @@ export class OracleTicketRepository implements TicketRepository {
 ```ts
 // src/infrastructure/database/database.module.ts
 import { TicketRepositoryToken } from '@domain';
-import { OracleTicketRepository } from '@infrastructure/database/repositories/oracle-ticket.repository';
+import { OracleTicketRepository } from '@infrastructure/database/repositories';
 
 providers: [
     // ...
@@ -197,7 +197,7 @@ providers: [
 exports: [/* ... */, TicketRepositoryToken],
 ```
 
-`DatabaseModule` is `@Global`, so any use case can inject `TicketRepositoryToken`. The typed token makes a wrong class a compile error.
+Export the class from `src/infrastructure/database/repositories/index.ts` (named export). `DatabaseModule` is `@Global`, so any use case can inject `TicketRepositoryToken`. The typed token makes a wrong class a compile error.
 
 ## 5. Test
 
