@@ -46,15 +46,17 @@ Adding a variable: [Add a config variable](../guides/add-config-variable.md).
 
 ### HTTP
 
-| Variable                                                    | Default                         | Notes                                                    |
-| ----------------------------------------------------------- | ------------------------------- | -------------------------------------------------------- |
-| `PORT`                                                      | `3000`                          |                                                          |
-| `CORS_ORIGINS`                                              | empty = CORS disabled           | comma-separated allow-list                               |
-| `SERVER_TIMEOUT` / `HEADERS_TIMEOUT` / `KEEP_ALIVE_TIMEOUT` | `120000` / `121000` / `61000`   | ms                                                       |
-| `JSON_BODY_LIMIT` / `URLENCODED_BODY_LIMIT`                 | `1mb`                           | 413 when exceeded                                        |
-| `SWAGGER_ENABLED`                                           | off in production, on otherwise | `/docs`                                                  |
-| `THROTTLE_TTL_MS` / `THROTTLE_LIMIT`                        | `60000` / `100`                 | `THROTTLE_LIMIT=0` disables                              |
-| `TRUST_PROXY`                                               | `false`                         | set behind a load balancer so throttling sees client IPs |
+| Variable                                                    | Default                         | Notes                                                                                                                           |
+| ----------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                                                      | `3000`                          |                                                                                                                                 |
+| `CORS_ORIGINS`                                              | empty = CORS disabled           | comma-separated allow-list                                                                                                      |
+| `SERVER_TIMEOUT` / `HEADERS_TIMEOUT` / `KEEP_ALIVE_TIMEOUT` | `120000` / `121000` / `61000`   | ms                                                                                                                              |
+| `JSON_BODY_LIMIT` / `URLENCODED_BODY_LIMIT`                 | `1mb`                           | 413 when exceeded                                                                                                               |
+| `SWAGGER_ENABLED`                                           | off in production, on otherwise | `/docs`                                                                                                                         |
+| `THROTTLE_TTL_MS` / `THROTTLE_LIMIT`                        | `60000` / `100`                 | `THROTTLE_LIMIT=0` disables                                                                                                     |
+| `TRUST_PROXY`                                               | `false`                         | set behind a load balancer so throttling sees client IPs                                                                        |
+| `CSRF_ENABLED`                                              | `true`                          | reject cross-site POST/PUT/PATCH/DELETE authenticated by the JWT cookie ([HTTP interface](http-interface.md#security-defaults)) |
+| `CSRF_TRUSTED_ORIGINS`                                      | `CORS_ORIGINS`                  | origins allowed to send cookie-authenticated writes, besides the API's own                                                      |
 
 ### JWT
 

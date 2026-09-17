@@ -13,6 +13,10 @@ export const httpSchema = z.object({
     throttleTtlMs: z.coerce.number().int().min(1).default(60000),
     throttleLimit: z.coerce.number().int().min(0).default(100), // 0 disables
     trustProxy: z.boolean().default(false),
+    /** Reject cross-site state-changing requests authenticated by the JWT cookie. */
+    csrfEnabled: z.boolean().default(true),
+    /** Origins allowed to send cookie-authenticated writes, besides the API's own. Default: corsOrigins. */
+    csrfTrustedOrigins: z.array(z.string().min(1)).optional(),
 });
 
 export type HttpConfig = z.infer<typeof httpSchema>;

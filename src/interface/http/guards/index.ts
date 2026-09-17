@@ -1,3 +1,5 @@
+export { CsrfGuard, CsrfRejectedError } from './csrf.guard';
+
 export { JwtGuard } from './jwt.guard';
 
 export { getAuthenticatedUser } from './current-user.util';

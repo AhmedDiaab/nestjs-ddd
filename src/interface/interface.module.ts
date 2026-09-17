@@ -3,6 +3,7 @@ import type { ConfigPort } from '@application/ports';
 import { ConfigPortToken } from '@application/ports';
 import { ProviderFactory } from '@common/factories';
 import { DatabaseInfoController, HealthController } from '@interface/http/controllers';
+import { CsrfGuard } from '@interface/http/guards';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -31,6 +32,7 @@ import { ZodHttpInterceptor } from './http/interceptors/zod-http.interceptor';
     providers: [
         ErrorPresenter,
         ProviderFactory.class(APP_GUARD, ThrottlerGuard),
+        ProviderFactory.class(APP_GUARD, CsrfGuard),
         ProviderFactory.class(APP_INTERCEPTOR, ZodHttpInterceptor),
         ProviderFactory.class(APP_INTERCEPTOR, ResponseFormatterInterceptor),
         ProviderFactory.class(APP_FILTER, GlobalExceptionFilter),

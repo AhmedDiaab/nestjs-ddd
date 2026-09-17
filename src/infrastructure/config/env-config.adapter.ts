@@ -53,6 +53,8 @@ function hydrate() {
             throttleTtlMs: envString(env.THROTTLE_TTL_MS),
             throttleLimit: envString(env.THROTTLE_LIMIT),
             trustProxy: envBool(env.TRUST_PROXY),
+            csrfEnabled: envBool(env.CSRF_ENABLED),
+            csrfTrustedOrigins: envList(env.CSRF_TRUSTED_ORIGINS),
         },
         database: databaseSources
             ? {
