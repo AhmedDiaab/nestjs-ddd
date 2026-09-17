@@ -1,4 +1,4 @@
-import type { LogMeta } from '@application/shared/logging';
+import type { LogMeta } from '@application/shared';
 
 export interface LoggerPort {
     debug(message: string, meta?: LogMeta): void;

@@ -1,10 +1,14 @@
-import { ProblemTypes, type ProblemLike } from '@shared/problem';
-import { AppError } from './app-error';
+import { ProblemTypes, type ProblemLike } from '@shared';
+import { AppError } from './app.error';
 
 export class InfrastructureError extends AppError {
-    constructor(public readonly cause: unknown) {
-        super('Infrastructure failure', cause);
+    constructor(
+        message = 'Infrastructure failure',
+        public readonly cause?: unknown,
+    ) {
+        super(message, cause);
     }
+
     toProblem(): ProblemLike {
         return {
             kind: 'service_unavailable',

@@ -1,4 +1,4 @@
-import type { CursorRequest, OffsetRequest, PageEnvelope } from '@shared/pagination/types';
+import type { CursorRequest, OffsetRequest, PageEnvelope } from '@shared/pagination';
 
 export interface OffsetRepositoryPort<T, Filter = unknown> {
     findManyOffset(filter: Filter, req: OffsetRequest): Promise<PageEnvelope<T>>;

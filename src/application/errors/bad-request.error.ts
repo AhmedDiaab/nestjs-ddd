@@ -1,5 +1,5 @@
-import { ProblemTypes, type ProblemLike } from '@shared/problem';
-import { AppError } from './app-error';
+import { ProblemTypes, type ProblemLike } from '@shared';
+import { AppError } from './app.error';
 
 export class BadRequestError extends AppError {
     constructor(m = 'Bad Request') {

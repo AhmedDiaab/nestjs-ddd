@@ -1,5 +1,5 @@
-import { ProblemTypes, type ProblemLike } from '@shared/problem';
-import { AppError } from './app-error';
+import { ProblemTypes, type ProblemLike } from '@shared';
+import { AppError } from './app.error';
 
 export class UnexpectedError extends AppError {
     constructor(public readonly cause: unknown) {
