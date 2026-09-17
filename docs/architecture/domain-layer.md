@@ -68,7 +68,40 @@ Subclass `DomainError` and override `toProblem()` to choose another kind (e.g. `
 
 ## Domain events
 
-`AggregateRoot` collects events; nothing publishes them yet. When you need them: after a successful `save`, call `aggregate.pullEvents()` in the use case and hand the events to an application `EventPublisherPort`.
+`AggregateRoot` records events (`addEvent`); the use case publishes them **after the change is committed**:
+
+```ts
+await this.tickets.save(ticket, { actor: username });
+await this.events.publish(ticket.pullEvents()); // DomainEventPublisherPortToken
+```
+
+With a unit of work, publish after `unitOfWork.run(...)` returns successfully, never inside it (a rollback would leave handlers acting on data that doesn't exist).
+
+React to an event with a handler in the application layer:
+
+```ts
+// src/application/events/handlers/notify-ticket-closed.handler.ts
+@Injectable()
+export class NotifyTicketClosedHandler implements DomainEventHandler<TicketClosed> {
+    readonly eventName = 'TicketClosed';
+
+    constructor(@Inject(LoggerPortToken) private readonly logger: LoggerPort) {}
+
+    handle(event: TicketClosed): Promise<void> {
+        this.logger.info('tickets.closed.notified', { ticketId: event.ticketId });
+        return Promise.resolve();
+    }
+}
+```
+
+Register it in the `eventHandlers` list in `src/application/application.module.ts`.
+
+| Behaviour           | Default (`InProcessDomainEventPublisher`)                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| Delivery            | in process, handlers matched by `eventName`, run one after another                               |
+| Handler throws      | logged as `domain.event.handler.failed`; other handlers still run; the request doesn't fail      |
+| Guaranteed delivery | not provided: write events to an outbox table in the same unit of work and publish from a worker |
+| Message broker      | bind `DomainEventPublisherPortToken` to a broker adapter in infrastructure instead               |
 
 ## Auth types
 

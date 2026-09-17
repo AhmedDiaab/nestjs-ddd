@@ -1,4 +1,9 @@
 export {
+    type DomainEventPublisherPort,
+    DomainEventPublisherPortToken,
+} from './domain-event-publisher.port';
+
+export {
     type ConfigKey,
     type ConfigPort,
     type ConfigValue,

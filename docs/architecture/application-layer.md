@@ -47,15 +47,16 @@ Declare the failure union in the type parameters so callers and tests see what c
 
 ## Ports
 
-| File                                        | Port                                                                                | Implemented by         |
-| ------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------- |
-| `ports/config.port.ts`                      | `ConfigPort`: typed `get('dot.path')`, `isDevelopment()`, `isProduction()`, `all()` | `EnvConfigAdapter`     |
-| `ports/logger.port.ts`                      | `LoggerPort`: `debug/info/warn/error(message, meta)`                                | `PinoLoggerAdapter`    |
-| `ports/queries/database-info.query.port.ts` | example query port + token                                                          | `DatabaseInfoQueryDao` |
-| `ports/queries/query-options.ts`            | `QueryOptions` (`{ actor }`) shared by query ports                                  | n/a                    |
-| `ports/queries/*`                           | read models for responses (added per feature)                                       | query DAOs             |
-| `ports/unit-of-work.port.ts`                | `UnitOfWorkPort.run(work, { actor })`: atomic multi-repository writes               | `DatabaseUnitOfWork`   |
-| `ports/tokens.ts`                           | tokens for the cross-cutting ports                                                  | n/a                    |
+| File                                        | Port                                                                                | Implemented by                                         |
+| ------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `ports/config.port.ts`                      | `ConfigPort`: typed `get('dot.path')`, `isDevelopment()`, `isProduction()`, `all()` | `EnvConfigAdapter`                                     |
+| `ports/logger.port.ts`                      | `LoggerPort`: `debug/info/warn/error(message, meta)`                                | `PinoLoggerAdapter`                                    |
+| `ports/queries/database-info.query.port.ts` | example query port + token                                                          | `DatabaseInfoQueryDao`                                 |
+| `ports/queries/query-options.ts`            | `QueryOptions` (`{ actor }`) shared by query ports                                  | n/a                                                    |
+| `ports/queries/*`                           | read models for responses (added per feature)                                       | query DAOs                                             |
+| `ports/unit-of-work.port.ts`                | `UnitOfWorkPort.run(work, { actor })`: atomic multi-repository writes               | `DatabaseUnitOfWork`                                   |
+| `ports/domain-event-publisher.port.ts`      | `DomainEventPublisherPort.publish(events)` after commit                             | `InProcessDomainEventPublisher` (`application/events`) |
+| `ports/tokens.ts`                           | tokens for the cross-cutting ports                                                  | n/a                                                    |
 
 Read-model types (e.g. `TicketSummary`) are plain serialisable objects: ISO date strings, no class instances.
 

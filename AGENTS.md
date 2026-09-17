@@ -59,6 +59,7 @@ Details: [`docs/architecture/overview.md`](docs/architecture/overview.md).
     - `outFormat: oracledb.OUT_FORMAT_OBJECT` + named columns; map rows in `infrastructure/database/mappers`, never in domain
     - writes inside `db.transaction(...)`; several aggregates atomically → `UnitOfWorkPort.run(...)` in the use case, never connections in use cases
     - pass `{ contextUser: options?.actor, tag: 'feature.method' }` on every call
+- **Domain events**: aggregates `addEvent`; use cases `publish(aggregate.pullEvents())` via `DomainEventPublisherPortToken` **after** the save/unit of work commits; handlers implement `DomainEventHandler` in `src/application/events` and are listed in `ApplicationModule`.
 - **Actor**: controllers pass `user.username` → use case input `username` → port option `actor` → adapter `contextUser` (Oracle `CLIENT_IDENTIFIER`).
 - **Config**: new env vars go through a Zod schema + `envString`/`envBool`/`envList` in `env-config.adapter.ts`, `.env.example`, and `docs/architecture/configuration.md`. Read via `ConfigPortToken`.
 - **Logging**: inject `LoggerPortToken`; dotted event names (`tickets.close.rejected`) + meta object. Never log secrets, tokens, bind values or unnecessary personal data.
