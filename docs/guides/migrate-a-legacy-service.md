@@ -15,7 +15,52 @@ clients ─► reverse proxy ─┬─► legacy service      (everything not mi
 
 Why not a rewrite in one go: the old behaviour is the specification, quirks included. Moving one route at a time lets you compare old and new responses for real traffic, and roll a route back by changing one proxy rule.
 
-If there is no proxy, the same order still works: ship the new service alongside, point one client (or one feature flag) at it, then widen.
+If there is no proxy you control, see [No proxy: behind a VIP or load balancer](#no-proxy-behind-a-vip-or-load-balancer) for how to get the same route-by-route safety.
+
+## No proxy: behind a VIP or load balancer
+
+A common setup: clients hit one hostname on a VIP (F5, NetScaler, HAProxy, cloud LB) that balances across servers running the legacy service, and the network team owns it. Pick the first option that your VIP and your access allow:
+
+| Option                         | How it works                                                                                                                                              | Switch / roll back                | Use when                                                        |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | --------------------------------------------------------------- |
+| **A. Path routing on the VIP** | ask the network team for content switching: `/v1/tickets*` → new pool, everything else → legacy pool (F5 iRule, HAProxy `use_backend`, ALB listener rule) | one VIP rule per route            | the VIP can route by URI: usually the least work and the safest |
+| **B. New service in front**    | the VIP keeps one pool, now pointing at the new service; the new service serves migrated routes and forwards the rest to the legacy service               | deploy/revert the forwarding list | you own the new service's deployment but not the VIP            |
+| **C. Legacy forwards**         | the VIP keeps pointing at the legacy service; in it, migrated paths are forwarded to the new service                                                      | one list in legacy config         | touching legacy is acceptable and easier than changing the VIP  |
+| **D. Blue/green by pool**      | the new service must serve **every** route; the VIP moves the whole hostname from the legacy pool to the new pool                                         | switch the pool back              | the service is small enough to finish in one go                 |
+| **E. Second hostname**         | new hostname/VIP for the new service; clients move endpoint by endpoint                                                                                   | per client                        | few, cooperative clients (internal callers)                     |
+
+Options B and C mean requests pass through an extra hop while the migration runs; remove it when the last route has moved.
+
+### If you take option B (new service in front)
+
+The template has no built-in forwarder; add one as a small piece of infrastructure and keep it dumb:
+
+- Forward **only** what is not migrated: match the paths your controllers don't serve, and let `FallbackController` keep answering 404 for genuinely unknown paths.
+- Stream request and response bodies through unchanged; don't parse them, don't re-wrap them in the envelope, don't log bodies.
+- Pass through `Authorization`, cookies, the request-id header (`REQUEST_ID_HEADER`) and `X-Forwarded-For`; add the client IP if it is missing.
+- Give the forwarder its own timeout (below the VIP's) and log `legacy.forward.failed` with the path and status, never the body.
+- On a legacy failure return the legacy status as it is; don't turn it into a 500.
+- Keep a single list of forwarded prefixes in config so shrinking it is one deployment.
+
+### Whatever option you take, behind a VIP check these
+
+| Concern                | What to do                                                                                                                                                                                               |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Health checks**      | point the VIP's monitor at `GET /health` (200, no auth, not rate limited). Use `/health/ready` for deployment readiness, not for the VIP monitor, so a brief database blip doesn't pull every member out |
+| **Client IP**          | the VIP hides it: set `TRUST_PROXY=true` so throttling and logs use `X-Forwarded-For` instead of the VIP's address                                                                                       |
+| **Rate limiting**      | counters are per instance; with several members behind a VIP set `THROTTLE_STORAGE=redis` and `THROTTLE_REDIS_URL` ([Configuration](../architecture/configuration.md))                                   |
+| **TLS**                | usually terminated at the VIP; the app speaks plain HTTP inside. Keep `CORS_ORIGINS` and any cookie `Secure`/`SameSite` settings written for the **public** scheme and host                              |
+| **Timeouts**           | keep `KEEP_ALIVE_TIMEOUT` above the VIP's idle timeout and `SERVER_TIMEOUT` below its request timeout, or you get sporadic 502s                                                                          |
+| **Draining**           | on deploy, take the member out of the pool first, then stop the process: shutdown hooks drain the database pool ([Operations](../architecture/operations.md))                                            |
+| **Database sessions**  | every member opens its own pool: `poolMax × instances` must stay under what the DBA allows                                                                                                               |
+| **Tokens and secrets** | every member verifies with the same `JWT_SECRET`/issuer/audience; identical config across members                                                                                                        |
+| **Sticky sessions**    | not needed (no server-side session). Ask for them to be off, so one member's restart doesn't strand clients                                                                                              |
+
+### Proving routes without a proxy
+
+- **Compare before switching**: replay captured requests against both services in a test environment and diff the responses; with option B or C you can also mirror a copy of production traffic to the new service and log differences only.
+- **Widen slowly**: option A per path, option E per client, option D per environment (test → staging → production).
+- **Have the rollback ready**: the VIP rule, forwarding list or pool member you will change, written down before the switch, and test it once in staging.
 
 ## 1. Inventory before writing code
 
