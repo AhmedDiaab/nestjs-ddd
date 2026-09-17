@@ -73,22 +73,22 @@ const createHost = (): HostBundle => {
 
 describe('GlobalExceptionFilter (behavioural)', () => {
     it('wraps HttpExceptions in the envelope and logs 4xx as warnings', () => {
-        const config = createConfigStub(true);
+        // Arrange
         const { logger, warn } = createLoggerStub();
-        const presenter = new ErrorPresenter();
-        const filter = new GlobalExceptionFilter(presenter, config, logger);
+        const filter = new GlobalExceptionFilter(
+            new ErrorPresenter(),
+            createConfigStub(true),
+            logger,
+        );
         const hostBundle = createHost();
-
         const exception = new BadRequestException({ message: 'Missing username', code: 'INVALID' });
+
+        // Act
         filter.catch(exception, hostBundle.host);
 
+        // Assert
         expect(hostBundle.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
-        const payload = hostBundle.json.mock.calls[0][0] as {
-            success: boolean;
-            error: { message: string; code?: string };
-            meta: { path: string; requestId?: string };
-        };
-        expect(payload).toMatchObject({
+        expect(hostBundle.json.mock.calls[0][0]).toMatchObject({
             success: false,
             error: { message: 'Missing username', code: 'INVALID' },
             meta: { path: '/users/countries', requestId: 'req-1' },
@@ -97,22 +97,22 @@ describe('GlobalExceptionFilter (behavioural)', () => {
     });
 
     it('delegates unknown errors to ErrorPresenter and logs errors for 500s', () => {
-        const config = createConfigStub(true);
+        // Arrange
         const { logger, error } = createLoggerStub();
-        const presenter = new ErrorPresenter();
-        const filter = new GlobalExceptionFilter(presenter, config, logger);
+        const filter = new GlobalExceptionFilter(
+            new ErrorPresenter(),
+            createConfigStub(true),
+            logger,
+        );
         const hostBundle = createHost();
         hostBundle.req.id = undefined;
 
+        // Act
         filter.catch(new Error('boom'), hostBundle.host);
 
+        // Assert
         expect(hostBundle.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
-        const payload = hostBundle.json.mock.calls[0][0] as {
-            success: boolean;
-            error: { message: string };
-            meta: { requestId?: string };
-        };
-        expect(payload).toMatchObject({
+        expect(hostBundle.json.mock.calls[0][0]).toMatchObject({
             success: false,
             error: { message: 'Unexpected error' },
             meta: { requestId: 'no-id' },
@@ -121,21 +121,8 @@ describe('GlobalExceptionFilter (behavioural)', () => {
     });
 
     it('logs 5xx even when stack traces are disabled, without the stack', () => {
-        const config = createConfigStub(false);
+        // Arrange
         const { logger, error } = createLoggerStub();
-        const filter = new GlobalExceptionFilter(new ErrorPresenter(), config, logger);
-        const hostBundle = createHost();
-
-        filter.catch(new Error('boom'), hostBundle.host);
-
-        expect(error).toHaveBeenCalledWith(
-            expect.stringContaining('500'),
-            expect.objectContaining({ stack: undefined }),
-        );
-    });
-
-    it('never returns internal error details to the client', () => {
-        const { logger } = createLoggerStub();
         const filter = new GlobalExceptionFilter(
             new ErrorPresenter(),
             createConfigStub(false),
@@ -143,22 +130,43 @@ describe('GlobalExceptionFilter (behavioural)', () => {
         );
         const hostBundle = createHost();
 
-        filter.catch(
-            new DatabaseExecutionError(
-                'main',
-                'site.delete',
-                new Error('ORA-20101 secret'),
-                'ORA-20101',
-            ),
-            hostBundle.host,
+        // Act
+        filter.catch(new Error('boom'), hostBundle.host);
+
+        // Assert
+        expect(error).toHaveBeenCalledWith(
+            expect.stringContaining('500'),
+            expect.objectContaining({ stack: undefined }),
+        );
+    });
+
+    it('never returns internal error details to the client', () => {
+        // Arrange
+        const { logger } = createLoggerStub();
+        const filter = new GlobalExceptionFilter(
+            new ErrorPresenter(),
+            createConfigStub(false),
+            logger,
+        );
+        const hostBundle = createHost();
+        const exception = new DatabaseExecutionError(
+            'main',
+            'site.delete',
+            new Error('ORA-20101 secret'),
+            'ORA-20101',
         );
 
+        // Act
+        filter.catch(exception, hostBundle.host);
+
+        // Assert
         const payload = JSON.stringify(hostBundle.json.mock.calls[0][0]);
         expect(payload).not.toContain('ORA-20101');
         expect(payload).not.toContain('secret');
     });
 
     it('maps exposed body-parser errors to their 4xx status instead of 500', () => {
+        // Arrange
         const { logger } = createLoggerStub();
         const filter = new GlobalExceptionFilter(
             new ErrorPresenter(),
@@ -172,8 +180,10 @@ describe('GlobalExceptionFilter (behavioural)', () => {
             type: 'entity.too.large',
         });
 
+        // Act
         filter.catch(tooLarge, hostBundle.host);
 
+        // Assert
         expect(hostBundle.status).toHaveBeenCalledWith(413);
         expect(hostBundle.json.mock.calls[0][0]).toMatchObject({
             success: false,

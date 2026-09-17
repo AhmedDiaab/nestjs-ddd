@@ -8,16 +8,19 @@ import { oracleSource } from '../../../../fixtures/database/oracle-source';
 
 describe('oracle pool options', () => {
     it('maps source config to PoolAttributes with the right units', () => {
-        const attrs = toPoolAttributes(
-            oracleSource({
-                poolTimeoutSec: 30,
-                poolPingTimeoutMs: 2000,
-                queueTimeoutMs: 15000,
-                connectTimeoutSec: 5,
-                expireTimeMin: 2,
-            }),
-        );
+        // Arrange
+        const source = oracleSource({
+            poolTimeoutSec: 30,
+            poolPingTimeoutMs: 2000,
+            queueTimeoutMs: 15000,
+            connectTimeoutSec: 5,
+            expireTimeMin: 2,
+        });
 
+        // Act
+        const attrs = toPoolAttributes(source);
+
+        // Assert
         expect(attrs).toMatchObject({
             poolAlias: 'main',
             user: 'app',
@@ -35,15 +38,18 @@ describe('oracle pool options', () => {
     });
 
     it('derives credentials from connectionUrl', () => {
-        const attrs = toPoolAttributes(
-            oracleSource({
-                connectString: undefined,
-                user: undefined,
-                password: undefined,
-                connectionUrl: 'oracle://scott:p%40ss@db.local:1522/ORCLPDB1',
-            }),
-        );
+        // Arrange
+        const source = oracleSource({
+            connectString: undefined,
+            user: undefined,
+            password: undefined,
+            connectionUrl: 'oracle://scott:p%40ss@db.local:1522/ORCLPDB1',
+        });
 
+        // Act
+        const attrs = toPoolAttributes(source);
+
+        // Assert
         expect(attrs).toMatchObject({
             user: 'scott',
             password: 'p@ss',
@@ -52,20 +58,40 @@ describe('oracle pool options', () => {
     });
 
     it('defaults the port to 1521', () => {
-        expect(parseOracleUrl('oracle://u:p@host/SVC').connectString).toBe('host:1521/SVC');
+        // Arrange
+        const url = 'oracle://u:p@host/SVC';
+
+        // Act
+        const credentials = parseOracleUrl(url);
+
+        // Assert
+        expect(credentials.connectString).toBe('host:1521/SVC');
     });
 
     it('omits user/password for external auth', () => {
-        const attrs = toPoolAttributes(oracleSource({ externalAuth: true }));
+        // Arrange
+        const source = oracleSource({ externalAuth: true });
+
+        // Act
+        const attrs = toPoolAttributes(source);
+
+        // Assert
         expect(attrs.user).toBeUndefined();
         expect(attrs.password).toBeUndefined();
         expect(attrs.externalAuth).toBe(true);
     });
 
-    it('maps outFormat', () => {
-        expect(toExecuteDefaults(oracleSource({ outFormat: 'object' })).outFormat).toBe(
-            oracledb.OUT_FORMAT_OBJECT,
-        );
-        expect(toExecuteDefaults(oracleSource()).outFormat).toBe(oracledb.OUT_FORMAT_ARRAY);
+    it.each([
+        ['object', oracledb.OUT_FORMAT_OBJECT],
+        [undefined, oracledb.OUT_FORMAT_ARRAY],
+    ] as const)('maps outFormat %j', (outFormat, expected) => {
+        // Arrange
+        const source = outFormat ? oracleSource({ outFormat }) : oracleSource();
+
+        // Act
+        const defaults = toExecuteDefaults(source);
+
+        // Assert
+        expect(defaults.outFormat).toBe(expected);
     });
 });

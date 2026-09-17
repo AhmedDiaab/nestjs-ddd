@@ -4,15 +4,24 @@ import { generatePinoOptions, isHealthCheck } from '@infrastructure/logging/pino
 import type { Options as PinoHttpOptions } from 'pino-http';
 
 describe('pino options', () => {
-    it.each(['/health', '/health/', '/health/ready', '/health/ready?probe=1'])(
-        'treats %s as a health check',
-        (url) => expect(isHealthCheck(url)).toBe(true),
-    );
+    it.each([
+        ['/health', true],
+        ['/health/', true],
+        ['/health/ready', true],
+        ['/health/ready?probe=1', true],
+        ['/v1/health', false],
+        ['/healthz', false],
+        ['/health/other', false],
+        [undefined, false],
+    ])('isHealthCheck(%j) returns %j', (url, expected) => {
+        // Arrange: url from table
 
-    it.each(['/v1/health', '/healthz', '/health/other', undefined])(
-        'does not treat %s as one',
-        (url) => expect(isHealthCheck(url)).toBe(false),
-    );
+        // Act
+        const result = isHealthCheck(url);
+
+        // Assert
+        expect(result).toBe(expected);
+    });
 
     describe('customLogLevel', () => {
         const config = {
@@ -29,16 +38,18 @@ describe('pino options', () => {
                 undefined,
             );
 
-        it('silences successful health polls', () => {
-            expect(level('/health', 200)).toBe('silent');
-        });
+        it.each([
+            ['silences successful health polls', '/health', 200, 'silent'],
+            ['still logs failing health checks', '/health/ready', 503, 'error'],
+            ['logs normal requests', '/v1/orders', 200, 'info'],
+        ])('%s', (_case, url, statusCode, expected) => {
+            // Arrange: request from table
 
-        it('still logs failing health checks', () => {
-            expect(level('/health/ready', 503)).toBe('error');
-        });
+            // Act
+            const result = level(url, statusCode);
 
-        it('logs normal requests', () => {
-            expect(level('/v1/orders', 200)).toBe('info');
+            // Assert
+            expect(result).toBe(expected);
         });
     });
 });

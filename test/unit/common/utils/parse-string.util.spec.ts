@@ -2,16 +2,24 @@ import { toString } from '@common/utils';
 
 describe('toString test suite', () => {
     it('should parse term as string and return it as String object', () => {
-        const sut = toString;
+        // Arrange
+        const input = 123;
 
-        const result = sut(123);
+        // Act
+        const result = toString(input);
+
+        // Assert
         expect(result).toBe('123');
     });
 
     it('should return null if term is null', () => {
-        const sut = toString;
+        // Arrange
+        const input = null;
 
-        const result = sut(null);
+        // Act
+        const result = toString(input);
+
+        // Assert
         expect(result).toBeNull();
     });
 });

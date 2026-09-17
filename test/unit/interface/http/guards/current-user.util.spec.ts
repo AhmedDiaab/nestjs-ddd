@@ -10,9 +10,15 @@ describe('getAuthenticatedUser test suite', () => {
         }) as ExecutionContext;
 
     it('should return the user placed on the request by JwtGuard', () => {
+        // Arrange
         const user = { username: 'TEST', email: 'test@example.com' } as JWTPayload;
+        const context = contextWith({ user });
 
-        expect(getAuthenticatedUser(contextWith({ user }))).toBe(user);
+        // Act
+        const result = getAuthenticatedUser(context);
+
+        // Assert
+        expect(result).toBe(user);
     });
 
     it.each([
@@ -21,18 +27,33 @@ describe('getAuthenticatedUser test suite', () => {
         ['an empty user', { user: {} }],
         ['a user without a username', { user: { email: 'test@example.com' } }],
     ])('should throw UnauthorizedError for a request with %s', (_case, request) => {
-        expect(() => getAuthenticatedUser(contextWith(request))).toThrow(UnauthorizedError);
+        // Arrange
+        const context = contextWith(request);
+
+        // Act
+        const read = () => getAuthenticatedUser(context);
+
+        // Assert
+        expect(read).toThrow(UnauthorizedError);
     });
 
     it('should present as a 401 problem', () => {
+        // Arrange
+        const context = contextWith({});
+
+        // Act
+        let error: unknown;
         try {
-            getAuthenticatedUser(contextWith({}));
-            fail('expected UnauthorizedError');
-        } catch (error) {
-            expect((error as UnauthorizedError).toProblem()).toMatchObject({
-                kind: 'unauthorized',
-                title: 'Unauthorized',
-            });
+            getAuthenticatedUser(context);
+        } catch (e) {
+            error = e;
         }
+
+        // Assert
+        expect(error).toBeInstanceOf(UnauthorizedError);
+        expect((error as UnauthorizedError).toProblem()).toMatchObject({
+            kind: 'unauthorized',
+            title: 'Unauthorized',
+        });
     });
 });

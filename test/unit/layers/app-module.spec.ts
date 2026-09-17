@@ -13,14 +13,23 @@ const getMetadata = <T>(key: string, target: object): T[] => {
 
 describe('AppModule layering', () => {
     it('is the composition root for all layers', () => {
+        // Arrange
+        const layers = [InfrastructureModule, ApplicationModule, InterfaceModule];
+
+        // Act
         const imports = getMetadata<object>('imports', AppModule);
-        expect(imports).toEqual(
-            expect.arrayContaining([InfrastructureModule, ApplicationModule, InterfaceModule]),
-        );
+
+        // Assert
+        expect(imports).toEqual(expect.arrayContaining(layers));
     });
 
     it('registers the root controller', () => {
+        // Arrange: AppModule metadata
+
+        // Act
         const controllers = getMetadata<object>('controllers', AppModule);
+
+        // Assert
         expect(controllers).toContain(AppController);
     });
 });

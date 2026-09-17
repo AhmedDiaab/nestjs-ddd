@@ -15,6 +15,12 @@ describe('AppController', () => {
     });
 
     it('should return "Hello World!"', () => {
-        expect(appController.getHello()).toBe('Hello World!');
+        // Arrange: controller built in beforeEach
+
+        // Act
+        const result = appController.getHello();
+
+        // Assert
+        expect(result).toBe('Hello World!');
     });
 });

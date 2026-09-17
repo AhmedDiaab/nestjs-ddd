@@ -16,6 +16,7 @@ class DemoController {
 
 describe('ZodHttpInterceptor', () => {
     const interceptor = new ZodHttpInterceptor(new Reflector());
+    const next: CallHandler = { handle: () => of('ok') };
 
     const createContext = (req: Record<string, any>): ExecutionContext => {
         return {
@@ -29,49 +30,49 @@ describe('ZodHttpInterceptor', () => {
     };
 
     it('validates request parts and stores them on req.validated', async () => {
-        const req = {
-            query: { workgroupId: 'ops' },
-            params: {},
-            body: {},
-        };
+        // Arrange
+        const req = { query: { workgroupId: 'ops' }, params: {}, body: {} };
         const context = createContext(req);
-        const next: CallHandler = { handle: () => of('ok') };
 
+        // Act
         const stream: Observable<unknown> = await interceptor.intercept(context, next);
         const result = await lastValueFrom(stream);
 
+        // Assert
         expect(result).toBe('ok');
         expect(req).toMatchObject({ validated: { query: { workgroupId: 'ops' } } });
     });
 
     it('throws BadRequestException with formatted details when validation fails', async () => {
-        expect.assertions(3);
-        const req = {
-            query: {},
-            params: {},
-            body: {},
-        };
+        // Arrange
+        const req = { query: {}, params: {}, body: {} };
         const context = createContext(req);
-        const next: CallHandler = { handle: () => of('ok') };
 
-        await interceptor.intercept(context, next).catch((error: unknown) => {
-            expect(error).toBeInstanceOf(BadRequestException);
-            const badRequest = error as BadRequestException;
-            const response = badRequest.getResponse() as { message: string; details: string[] };
-            expect(response.message).toBe('Validation failed');
-            expect(response.details[0]).toContain('query.workgroupId');
-        });
+        // Act
+        const error: unknown = await interceptor.intercept(context, next).catch((e: unknown) => e);
+
+        // Assert
+        expect(error).toBeInstanceOf(BadRequestException);
+        const response = (error as BadRequestException).getResponse() as {
+            message: string;
+            details: string[];
+        };
+        expect(response.message).toBe('Validation failed');
+        expect(response.details[0]).toContain('query.workgroupId');
     });
 
     it('does not assign req.query (read-only getter in Express 5)', async () => {
+        // Arrange
         const req = Object.defineProperty({ params: {}, body: {} }, 'query', {
             get: () => ({ workgroupId: 'ops' }),
             enumerable: true,
         });
-        const next: CallHandler = { handle: () => of('ok') };
+        const context = createContext(req);
 
-        const stream: Observable<unknown> = await interceptor.intercept(createContext(req), next);
+        // Act
+        const stream: Observable<unknown> = await interceptor.intercept(context, next);
 
+        // Assert
         await expect(lastValueFrom(stream)).resolves.toBe('ok');
     });
 });

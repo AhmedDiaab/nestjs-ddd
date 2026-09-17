@@ -46,8 +46,13 @@ describe('PoolManager', () => {
     afterEach(() => jest.clearAllMocks());
 
     it('creates one pool per oracle source with mapped attributes', async () => {
-        await sut.init(config([oracle, postgres]));
+        // Arrange
+        const databaseConfig = config([oracle, postgres]);
 
+        // Act
+        await sut.init(databaseConfig);
+
+        // Assert
         expect(createPoolMock).toHaveBeenCalledTimes(1);
         expect(createPoolMock).toHaveBeenCalledWith(
             expect.objectContaining({ poolAlias: 'main', connectString: 'h/s' }),
@@ -57,16 +62,25 @@ describe('PoolManager', () => {
     });
 
     it('placeholder dialects throw UnsupportedDialectError when used', async () => {
+        // Arrange
         await sut.init(config([oracle, postgres]));
-        await expect(sut.withConnection('reports', () => Promise.resolve())).rejects.toBeInstanceOf(
-            UnsupportedDialectError,
-        );
+
+        // Act
+        const call = sut.withConnection('reports', () => Promise.resolve());
+
+        // Assert
+        await expect(call).rejects.toBeInstanceOf(UnsupportedDialectError);
     });
 
     it('pingAll skips placeholder dialects that are not required', async () => {
+        // Arrange
         await sut.init(config([oracle, postgres]));
 
-        await expect(sut.pingAll({ retries: 0, jitterMs: 0 })).resolves.toBeUndefined();
+        // Act
+        const ping = sut.pingAll({ retries: 0, jitterMs: 0 });
+
+        // Assert
+        await expect(ping).resolves.toBeUndefined();
         expect(logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('skipped'),
             expect.objectContaining({ sourceKey: 'reports' }),
@@ -74,27 +88,36 @@ describe('PoolManager', () => {
     });
 
     it('pingAll fails when a required source is a placeholder', async () => {
+        // Arrange
         await sut.init(config([oracle, postgres]));
 
-        await expect(
-            sut.pingAll({ retries: 0, jitterMs: 0, requiredSet: new Set(['reports']) }),
-        ).rejects.toBeInstanceOf(AggregateDbHealthError);
+        // Act
+        const ping = sut.pingAll({ retries: 0, jitterMs: 0, requiredSet: new Set(['reports']) });
+
+        // Assert
+        await expect(ping).rejects.toBeInstanceOf(AggregateDbHealthError);
     });
 
     it('pingAll fails when a required oracle source cannot be reached', async () => {
+        // Arrange
         await sut.init(config([oracle]));
         connection.ping.mockRejectedValue(new Error('down'));
 
-        await expect(sut.pingAll({ retries: 0, jitterMs: 0 })).rejects.toBeInstanceOf(
-            AggregateDbHealthError,
-        );
+        // Act
+        const ping = sut.pingAll({ retries: 0, jitterMs: 0 });
+
+        // Assert
+        await expect(ping).rejects.toBeInstanceOf(AggregateDbHealthError);
     });
 
     it('health reports per source without throwing', async () => {
+        // Arrange
         await sut.init(config([oracle, postgres]));
 
+        // Act
         const health = await sut.health(1000);
 
+        // Assert
         expect(health).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({ sourceKey: 'main', ok: true, implemented: true }),
@@ -104,8 +127,13 @@ describe('PoolManager', () => {
     });
 
     it('closes all pools on module destroy', async () => {
+        // Arrange
         await sut.init(config([oracle]));
+
+        // Act
         await sut.onModuleDestroy();
+
+        // Assert
         expect(pool.close).toHaveBeenCalledWith(10);
     });
 });

@@ -49,23 +49,37 @@ describe('ResponseFormatterInterceptor test suite', () => {
     });
 
     it('should skip when SKIP_FORMAT_HEADER = true', async () => {
+        // Arrange
         req.headers['x-skip-format'] = true;
+
+        // Act
         const result = await lastValueFrom(sut.intercept(context, next));
 
+        // Assert
         expect(handleMock).toHaveBeenCalled();
         expect(result).toBe(body); // pass-through
     });
 
     it('should skip if headers already sent', async () => {
+        // Arrange
         res.headersSent = true;
+
+        // Act
         const result = await lastValueFrom(sut.intercept(context, next));
+
+        // Assert
         expect(handleMock).toHaveBeenCalled();
         expect(result).toBe(body); // pass-through
     });
 
     it('should return payload as is if it is buffer of similar type', async () => {
+        // Arrange
         body = Buffer.from([1, 2, 3]) as unknown as Buffer;
+
+        // Act
         const result = await lastValueFrom(sut.intercept(context, next));
+
+        // Assert
         expect(handleMock).toHaveBeenCalled();
         expect(result).toBe(body); // pass-through
     });
@@ -82,13 +96,18 @@ describe('ResponseFormatterInterceptor test suite', () => {
         });
 
         it('should forward response body if payload is envelope', async () => {
+            // Arrange
             body = Object.assign(body, {
                 success: true,
                 meta: {
                     test: true,
                 },
             });
+
+            // Act
             const result = await lastValueFrom(sut.intercept(context, next));
+
+            // Assert
             expect(handleMock).toHaveBeenCalled();
             expect(result).toEqual({
                 ...body,
@@ -102,11 +121,13 @@ describe('ResponseFormatterInterceptor test suite', () => {
         });
 
         it('should handle success result like body', async () => {
-            const okResut = Result.ok(body);
-            handleMock.mockReturnValueOnce(of(okResut));
+            // Arrange
+            handleMock.mockReturnValueOnce(of(Result.ok(body)));
 
+            // Act
             const result = await lastValueFrom(sut.intercept(context, next));
 
+            // Assert
             expect(handleMock).toHaveBeenCalled();
             expect(result).toEqual({
                 success: true,
@@ -120,19 +141,27 @@ describe('ResponseFormatterInterceptor test suite', () => {
         });
 
         it('should rethrow presentable Result errors so the filter sets the HTTP status', async () => {
+            // Arrange
             const error = new BadRequestError('test error');
             handleMock.mockReturnValueOnce(of(Result.err(error)));
 
-            await expect(lastValueFrom(sut.intercept(context, next))).rejects.toBe(error);
+            // Act
+            const response = lastValueFrom(sut.intercept(context, next));
+
+            // Assert
+            await expect(response).rejects.toBe(error);
         });
 
         it('should turn non-presentable Result errors into 422 with the error code', async () => {
+            // Arrange
             handleMock.mockReturnValueOnce(of(Result.err('database_error')));
 
+            // Act
             const thrown: unknown = await lastValueFrom(sut.intercept(context, next)).catch(
                 (e: unknown) => e,
             );
 
+            // Assert
             expect(thrown).toBeInstanceOf(UnprocessableEntityException);
             expect((thrown as UnprocessableEntityException).getResponse()).toMatchObject({
                 code: 'database_error',
@@ -140,7 +169,12 @@ describe('ResponseFormatterInterceptor test suite', () => {
         });
 
         it('should handle success responses', async () => {
+            // Arrange: plain body from beforeEach
+
+            // Act
             const result = await lastValueFrom(sut.intercept(context, next));
+
+            // Assert
             expect(handleMock).toHaveBeenCalled();
             expect(result).toEqual({
                 success: true,

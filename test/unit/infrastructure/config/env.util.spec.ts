@@ -1,24 +1,55 @@
 import { envBool, envList, envString } from '@infrastructure/config/env.util';
 
 describe('env helpers', () => {
-    it('envString treats blank as unset', () => {
-        expect(envString('  ')).toBeUndefined();
-        expect(envString(' a ')).toBe('a');
+    it.each([
+        ['  ', undefined],
+        [' a ', 'a'],
+    ])('envString(%j) returns %j (blank is unset)', (input, expected) => {
+        // Arrange: input from table
+
+        // Act
+        const result = envString(input);
+
+        // Assert
+        expect(result).toBe(expected);
     });
 
-    it('envBool parses common spellings and leaves unset undefined', () => {
-        expect(envBool(undefined)).toBeUndefined();
-        expect(envBool('')).toBeUndefined();
-        expect(envBool('TRUE')).toBe(true);
-        expect(envBool('0')).toBe(false);
+    it.each([
+        [undefined, undefined],
+        ['', undefined],
+        ['TRUE', true],
+        ['0', false],
+    ])('envBool(%j) returns %j', (input, expected) => {
+        // Arrange: input from table
+
+        // Act
+        const result = envBool(input);
+
+        // Assert
+        expect(result).toBe(expected);
     });
 
     it('envBool passes invalid input through so validation fails loudly', () => {
-        expect(envBool('maybe')).toBe('maybe');
+        // Arrange
+        const input = 'maybe';
+
+        // Act
+        const result = envBool(input);
+
+        // Assert
+        expect(result).toBe('maybe');
     });
 
-    it('envList splits and trims', () => {
-        expect(envList('a, b,,c')).toEqual(['a', 'b', 'c']);
-        expect(envList(undefined)).toBeUndefined();
+    it.each([
+        ['a, b,,c', ['a', 'b', 'c']],
+        [undefined, undefined],
+    ])('envList(%j) returns %j (split and trimmed)', (input, expected) => {
+        // Arrange: input from table
+
+        // Act
+        const result = envList(input);
+
+        // Assert
+        expect(result).toEqual(expected);
     });
 });

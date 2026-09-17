@@ -34,36 +34,63 @@ describe('App (e2e, no database configured)', () => {
     });
 
     it('GET /v1 wraps the response in the envelope with the request id', async () => {
-        const res = await request(app.getHttpServer())
-            .get('/v1')
-            .set('x-request-id', 'e2e-1')
-            .expect(200);
+        // Arrange
+        const requestId = 'e2e-1';
 
-        const body = res.body as Envelope;
-        expect(body).toMatchObject({
+        // Act
+        const res = await request(app.getHttpServer()).get('/v1').set('x-request-id', requestId);
+
+        // Assert
+        expect(res.status).toBe(200);
+        expect(res.body as Envelope).toMatchObject({
             success: true,
             data: 'Hello World!',
-            meta: { path: '/v1', requestId: 'e2e-1' },
+            meta: { path: '/v1', requestId },
         });
     });
 
     it('GET /health is version neutral', async () => {
-        const res = await request(app.getHttpServer()).get('/health').expect(200);
+        // Arrange: app started without a database
+
+        // Act
+        const res = await request(app.getHttpServer()).get('/health');
+
+        // Assert
+        expect(res.status).toBe(200);
         expect((res.body as Envelope).data).toEqual({ status: 'ok' });
     });
 
     it('GET /health/ready is ready with no sources', async () => {
-        const res = await request(app.getHttpServer()).get('/health/ready').expect(200);
+        // Arrange: app started without a database
+
+        // Act
+        const res = await request(app.getHttpServer()).get('/health/ready');
+
+        // Assert
+        expect(res.status).toBe(200);
         expect((res.body as Envelope).data).toEqual({ status: 'ok', sources: [] });
     });
 
     it('unknown routes return a 404 envelope', async () => {
-        const res = await request(app.getHttpServer()).get('/v1/nope').expect(404);
-        expect(res.body as Envelope).toMatchObject({ success: false, meta: { path: '/v1/nope' } });
+        // Arrange
+        const path = '/v1/nope';
+
+        // Act
+        const res = await request(app.getHttpServer()).get(path);
+
+        // Assert
+        expect(res.status).toBe(404);
+        expect(res.body as Envelope).toMatchObject({ success: false, meta: { path } });
     });
 
     it('protected routes return 401 without a token', async () => {
-        const res = await request(app.getHttpServer()).get('/v1/database-info').expect(401);
+        // Arrange: no Authorization header or cookie
+
+        // Act
+        const res = await request(app.getHttpServer()).get('/v1/database-info');
+
+        // Assert
+        expect(res.status).toBe(401);
         expect((res.body as Envelope).success).toBe(false);
     });
 });
