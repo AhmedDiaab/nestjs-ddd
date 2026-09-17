@@ -4,7 +4,7 @@ import { ConfigPortToken } from '@application/ports';
 import { ProviderFactory } from '@common/factories';
 import { ThrottlerStorageToken } from '@infrastructure/throttling';
 import { DatabaseInfoController, HealthController } from '@interface/http/controllers';
-import { CsrfGuard, JwtGuard } from '@interface/http/guards';
+import { CsrfGuard, JwtGuard, RolesGuard } from '@interface/http/guards';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule, type ThrottlerStorage } from '@nestjs/throttler';
@@ -37,6 +37,8 @@ import { ZodHttpInterceptor } from './http/interceptors/zod-http.interceptor';
         ProviderFactory.class(APP_GUARD, CsrfGuard),
         // authentication is global: routes open up with @Public(), they don't opt in
         ProviderFactory.class(APP_GUARD, JwtGuard),
+        // roles from the token; routes without @Roles() are unaffected
+        ProviderFactory.class(APP_GUARD, RolesGuard),
         ProviderFactory.class(APP_INTERCEPTOR, ZodHttpInterceptor),
         ProviderFactory.class(APP_INTERCEPTOR, ResponseFormatterInterceptor),
         ProviderFactory.class(APP_FILTER, GlobalExceptionFilter),

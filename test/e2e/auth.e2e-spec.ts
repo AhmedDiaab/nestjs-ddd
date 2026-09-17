@@ -1,11 +1,25 @@
 import { VersioningType, type INestApplication } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { MixedAuthController } from '../fixtures/http/mixed-auth.controller';
 import { OpenAuthController } from '../fixtures/http/open-auth.controller';
+import { RolesAuthController } from '../fixtures/http/roles-auth.controller';
 import { SilentAuthController } from '../fixtures/http/silent-auth.controller';
+
+const SECRET = 'e2e-secret-that-is-at-least-32-chars';
+
+const tokenFor = (roles?: string[]) =>
+    new JwtService({ secret: SECRET }).sign({
+        id: 'u-1',
+        username: 'alice',
+        admin: false,
+        email: 'alice@example.com',
+        name: 'Alice',
+        ...(roles ? { roles } : {}),
+    });
 
 describe('Authentication (e2e)', () => {
     let app: INestApplication<App>;
@@ -13,14 +27,19 @@ describe('Authentication (e2e)', () => {
     beforeAll(async () => {
         Object.assign(process.env, {
             NODE_ENV: 'test',
-            JWT_SECRET: 'e2e-secret-that-is-at-least-32-chars',
+            JWT_SECRET: SECRET,
             LOGGING_TO_FILE: 'false',
             LOG_LEVEL: 'error',
         });
         delete process.env.DATABASE_CONFIG_JSON;
 
         const moduleRef = await Test.createTestingModule({
-            controllers: [SilentAuthController, OpenAuthController, MixedAuthController],
+            controllers: [
+                SilentAuthController,
+                OpenAuthController,
+                MixedAuthController,
+                RolesAuthController,
+            ],
             imports: [AppModule],
         }).compile();
 
@@ -78,5 +97,45 @@ describe('Authentication (e2e)', () => {
         // Assert
         expect(res.status).toBe(401);
         expect(res.body).toMatchObject({ success: false });
+    });
+
+    it('refuses a token without the required role with 403', async () => {
+        // Arrange
+        const call = request(app.getHttpServer())
+            .get('/v1/e2e-auth/roles/admin-only')
+            .set('Authorization', `Bearer ${tokenFor(['viewer'])}`);
+
+        // Act
+        const res = await call;
+
+        // Assert
+        expect(res.status).toBe(403);
+        expect(res.body).toMatchObject({ success: false });
+    });
+
+    it('accepts a token carrying the required role', async () => {
+        // Arrange
+        const call = request(app.getHttpServer())
+            .get('/v1/e2e-auth/roles/admin-only')
+            .set('Authorization', `Bearer ${tokenFor(['admin'])}`);
+
+        // Act
+        const res = await call;
+
+        // Assert
+        expect(res.status).toBe(200);
+    });
+
+    it('leaves a route that names no role open to any authenticated caller', async () => {
+        // Arrange
+        const call = request(app.getHttpServer())
+            .get('/v1/e2e-auth/roles/any-user')
+            .set('Authorization', `Bearer ${tokenFor()}`);
+
+        // Act
+        const res = await call;
+
+        // Assert
+        expect(res.status).toBe(200);
     });
 });

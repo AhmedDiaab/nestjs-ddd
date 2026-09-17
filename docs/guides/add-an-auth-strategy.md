@@ -6,14 +6,15 @@ Terms: [Glossary](../glossary.md). The HTTP layer in general: [HTTP interface](.
 
 ## How it works today
 
-| Piece                                       | Where                                                        | Does                                                                                    |
-| ------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `JwtStrategy`                               | `src/infrastructure/auth/strategies/jwt.strategy.ts`         | verifies the token (cookie first, then `Authorization: Bearer`) and returns the payload |
-| `AuthModule`                                | `src/infrastructure/auth/auth.module.ts`                     | registers the strategies with Passport                                                  |
-| `JwtGuard`                                  | `src/interface/http/guards/jwt.guard.ts`                     | runs the strategy per request, unless the route is `@Public()`                          |
-| `@Public()`                                 | `src/interface/http/decorators/public.decorator.ts`          | opens one handler or a whole controller                                                 |
-| `@CurrentUser()` / `getAuthenticatedUser()` | `src/interface/http/decorators`, `src/interface/http/guards` | read the authenticated user in a controller or a guard                                  |
-| `Request.user`                              | `src/infrastructure/auth/types/express.d.ts`                 | types what a strategy puts on the request                                               |
+| Piece                                       | Where                                                                       | Does                                                                                    |
+| ------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `JwtStrategy`                               | `src/infrastructure/auth/strategies/jwt.strategy.ts`                        | verifies the token (cookie first, then `Authorization: Bearer`) and returns the payload |
+| `AuthModule`                                | `src/infrastructure/auth/auth.module.ts`                                    | registers the strategies with Passport                                                  |
+| `JwtGuard`                                  | `src/interface/http/guards/jwt.guard.ts`                                    | runs the strategy per request, unless the route is `@Public()`                          |
+| `@Public()`                                 | `src/interface/http/decorators/public.decorator.ts`                         | opens one handler or a whole controller                                                 |
+| `@Roles()` + `RolesGuard`                   | `src/interface/http/decorators/roles.decorator.ts`, `guards/roles.guard.ts` | requires a role from the token; global, so it cannot be forgotten                       |
+| `@CurrentUser()` / `getAuthenticatedUser()` | `src/interface/http/decorators`, `src/interface/http/guards`                | read the authenticated user in a controller or a guard                                  |
+| `Request.user`                              | `src/infrastructure/auth/types/express.d.ts`                                | types what a strategy puts on the request                                               |
 
 **Authentication is global**: `JwtGuard` is registered as an `APP_GUARD` in `src/interface/interface.module.ts`, so a new route is protected the moment it exists. Routes open up by saying so; they don't opt in. Forgetting a decorator gives you a 401, not an open endpoint.
 
@@ -29,6 +30,7 @@ providers: [
     ProviderFactory.class(APP_GUARD, ThrottlerGuard),
     ProviderFactory.class(APP_GUARD, CsrfGuard),
     ProviderFactory.class(APP_GUARD, JwtGuard),
+    ProviderFactory.class(APP_GUARD, RolesGuard),
 ],
 ```
 
@@ -249,29 +251,31 @@ A strategy answers _who is calling_. _What they may do_ is a separate check, and
 | "this user owns this ticket" / "this ticket is in their region" | use case, where the aggregate is loaded      | yes, as part of the work     |
 | "only rows of this user's tenant are visible"                   | the query itself (a bound `WHERE` predicate) | yes, and never as a 403 gate |
 
-Simple case, no database. The template's `JWTPayload` (`src/domain/auth/jwt-payload.interface.ts`) carries `admin: boolean`; add a `roles` field there if your tokens have one, and the strategy passes it through untouched:
+Roles carried by the token are built in. `JWTPayload.roles` (`src/domain/auth/jwt-payload.interface.ts`) holds what the issuer put there, `@Roles()` names what a route needs, and the global `RolesGuard` checks it — no database, no `@UseGuards` to forget:
 
 ```ts
-// src/interface/http/guards/roles.guard.ts
-@Injectable()
-export class RolesGuard implements CanActivate {
-    constructor(private readonly reflector: Reflector) {}
+import { Roles } from '@interface/http/decorators';
 
-    canActivate(context: ExecutionContext): boolean {
-        const required = this.reflector.getAllAndOverride<string[]>(ROLES, [
-            context.getHandler(),
-            context.getClass(),
-        ]);
-        if (!required?.length) return true;
+@Controller('reports')
+export class ReportsController {
+    @Roles('admin', 'auditor') // holding either one is enough
+    @Get('financial')
+    financial() {
+        return this.getFinancialReport.execute();
+    }
 
-        const user = getAuthenticatedUser(context); // 401 if the strategy didn't run
-        if (!required.some((role) => user.roles?.includes(role))) {
-            throw new ForbiddenError('Insufficient privileges');
-        }
-        return true;
+    @Get() // names no role: any authenticated caller
+    list() {
+        return this.listReports.execute();
     }
 }
 ```
+
+- A route with no `@Roles()` is unaffected: authentication still applies, the role check doesn't.
+- A caller whose token carries none of the named roles gets **403**; no token at all is still **401**, from `JwtGuard`.
+- `@Roles()` on the controller applies to every handler; on a handler it overrides the controller.
+- If your tokens name roles differently (`groups`, `scope`, a nested claim), map them to `roles` in `JwtStrategy.validate()` rather than teaching the guard about every issuer's shape.
+- The template's `JWTPayload` also has `admin: boolean`; treat it as legacy — prefer roles, and if you keep it, check it in the same guard rather than inventing a second one.
 
 ## Authorization that needs the database
 
@@ -374,6 +378,7 @@ Rule of thumb: a guard answers **"may this caller reach this endpoint at all?"**
 - [ ] `@Public()` list reviewed — that is the surface reachable without credentials
 - [ ] Credential never logged; user shape matches what controllers and the context user expect
 - [ ] Swagger security scheme added and applied to the routes that accept it
+- [ ] Roles that come from the token declared with `@Roles()`, not re-implemented in a controller
 - [ ] Authorization placed by what it needs: caller data → guard, resource data → use case, row filtering → the query
 - [ ] A guard that queries goes through a port, caches, passes `actor`, and lets a database outage surface as 503
 - [ ] Unit test for the guard, e2e for protected and open routes, mutation-checked

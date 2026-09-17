@@ -64,7 +64,7 @@ src/
 │   ├── common/             # FallbackController (404), ResponseFormatterInterceptor
 │   ├── decorators/         # @UseZodHttp, @Validated, @CurrentUser
 │   ├── errors/             # HTTP-only errors (CsrfRejectedError); business errors live in application/domain
-│   ├── guards/             # JwtGuard (global), getAuthenticatedUser, readGuardInput, CsrfGuard
+│   ├── guards/             # JwtGuard + RolesGuard (global), getAuthenticatedUser, readGuardInput, CsrfGuard
 │   ├── interceptors/       # ZodHttpInterceptor
 │   ├── pipes/ schemas/ swagger/
 │   ├── error-presenter.ts  # problem kind → HTTP status
@@ -93,7 +93,7 @@ test/
 ## Request lifecycle
 
 1. **Express middleware**: helmet, cookie-parser, body parsers (size limits), CORS, pino-http (assigns `req.id` from `x-request-id` or a UUID).
-2. **Guards**: global `ThrottlerGuard`, `CsrfGuard`, then `JwtGuard` (every route unless `@Public()`), then any route guard. Guards run **before** validation.
+2. **Guards**: global `ThrottlerGuard`, `CsrfGuard`, `JwtGuard` (every route unless `@Public()`) and `RolesGuard` (routes with `@Roles()`), then any route guard. Guards run **before** validation.
 3. **Interceptors**: `ZodHttpInterceptor` validates parts declared with `@UseZodHttp` (400 on failure); `ResponseFormatterInterceptor` wraps the result.
 4. **Controller** → **use case** → **ports** → **adapters** (DAO/repository → `ConnectionProvider` → `OracleClient`).
 5. **Response**: a plain value or `Result.ok` becomes `{ success: true, data, meta }`; `Result.err(error)` is rethrown.

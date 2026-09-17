@@ -54,7 +54,7 @@ Details: [`docs/architecture/overview.md`](docs/architecture/overview.md).
 - **Use cases** extend `UseCase<Input, Output, Failure>`. Expected failures: `return this.err(new SomeError())` (an `AppError`/`DomainError` whose problem kind maps to the HTTP status). Unexpected: throw. Never throw `HttpException` from application/domain.
 - **Controllers** only validate (`@UseZodHttp` + `@Validated('body'|'query'|'params')`), read `@CurrentUser()`, call one use case, and return its `Result`. Register them in `interface.module.ts` **before** `FallbackController`.
 - **Never assign `req.query`** (read-only in Express 5). Use `@Validated('query')`.
-- **Authentication is global**: `JwtGuard` is an `APP_GUARD`, so every route needs a token unless it carries `@Public()`. Never open a route to fix a failing test; add the token to the test instead.
+- **Authentication is global**: `JwtGuard` is an `APP_GUARD`, so every route needs a token unless it carries `@Public()`. Never open a route to fix a failing test; add the token to the test instead. Roles from the token: `@Roles('admin')` (global `RolesGuard`, 403); roles from a table: a query-port-backed guard ([guide](docs/guides/add-an-auth-strategy.md)).
 - **Guards** run before validation: use `readGuardInput(context, part, schema)` and throw `ForbiddenError`/`UnauthorizedError`; don't `return false`.
 - **Database access**:
     - always bind values (`:name`); never interpolate input into SQL
