@@ -3,7 +3,7 @@ import { type IncomingMessage } from 'node:http';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import type { ConfigPort } from '@application/ports';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import type { Params } from 'nestjs-pino';
 import type { TransportTargetOptions } from 'pino';
 import type { Options as PinoHttpOptions } from 'pino-http';
@@ -69,8 +69,9 @@ export const generatePinoOptions = (config: ConfigPort): Params => {
             level: config.get<string>('logging.logLevel'),
             autoLogging: true,
             transport: { targets },
-            genReqId: (req: Request) => {
-                const requestId = req.header(requestIdHeader) || randomUUID();
+            genReqId: (req: IncomingMessage) => {
+                const header = req.headers[requestIdHeader];
+                const requestId = (Array.isArray(header) ? header[0] : header) || randomUUID();
                 req.headers[requestIdHeader] = requestId;
                 req.id = requestId;
                 return requestId;
@@ -95,7 +96,7 @@ export const generatePinoOptions = (config: ConfigPort): Params => {
                     statusCode: res.statusCode,
                 }),
             },
-            customProps: (req: Request) => ({
+            customProps: (req: IncomingMessage) => ({
                 env: config.get<string>('app.env'),
                 requestId: req.id,
             }),
