@@ -1,8 +1,8 @@
-import { LoggerPort } from '@application/ports/logger.port';
-import { Injectable, Scope } from '@nestjs/common';
+import { LoggerPort } from '@application/ports';
+import { Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 
-@Injectable({ scope: Scope.REQUEST })
+@Injectable()
 export class PinoLoggerAdapter implements LoggerPort {
     constructor(private readonly logger: PinoLogger) {}
 

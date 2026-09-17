@@ -2,28 +2,28 @@ import { randomUUID } from 'node:crypto';
 import { type IncomingMessage } from 'node:http';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
-import type { ConfigPort } from '@application/ports/config.port';
+import type { ConfigPort } from '@application/ports';
 import type { Request, Response } from 'express';
+import type { Params } from 'nestjs-pino';
+import type { TransportTargetOptions } from 'pino';
 import type { Options as PinoHttpOptions } from 'pino-http';
 
-function generateFileRotationTransport(config: ConfigPort) {
-    const logToFile = config.get<boolean>('logging.toFile')!;
+function fileRotationTarget(config: ConfigPort): TransportTargetOptions | undefined {
+    if (!config.get<boolean>('logging.toFile')) return undefined;
 
-    if (!logToFile) return {};
-
-    const logDirectory = config.get<string>('logging.directory')!.toLowerCase();
-    const logFileName = config.get<string>('logging.fileName')!.toLowerCase();
+    const logDirectory = config.get<string>('logging.directory')!;
+    const logFileName = config.get<string>('logging.fileName')!;
     const logFilesLimit = config.get<number>('logging.filesLimit')!;
-    const maxSizeInMegaBytes = config.get<number>('logging.maxSize');
+    const maxSize = config.get<string>('logging.maxSize');
 
     return {
         target: 'pino-roll',
+        level: config.get<string>('logging.logLevel'),
         options: {
             file: join(logDirectory, logFileName),
             frequency: 'daily',
             mkdir: true,
-            size: maxSizeInMegaBytes,
-            gzip: true,
+            size: maxSize,
             limit: {
                 count: logFilesLimit + 1, // mean if 14 then 14 file + current file
             },
@@ -32,30 +32,44 @@ function generateFileRotationTransport(config: ConfigPort) {
     };
 }
 
-function generateConsolePrettyLogs(config: ConfigPort) {
-    if (!config.isDevelopment()) return {};
+function isResolvable(moduleName: string): boolean {
+    try {
+        require.resolve(moduleName);
+        return true;
+    } catch {
+        return false;
+    }
+}
 
+function consoleTarget(config: ConfigPort): TransportTargetOptions {
+    const pretty = config.get<boolean>('logging.pretty') ?? config.isDevelopment();
+    // pino-pretty is a devDependency: fall back to JSON stdout when it is not installed
+    if (pretty && isResolvable('pino-pretty')) {
+        return {
+            target: 'pino-pretty',
+            level: config.get<string>('logging.logLevel'),
+            options: { singleLine: true, colorize: true },
+        };
+    }
     return {
-        target: 'pino-pretty',
-        options: { singleLine: true, colorize: true },
+        target: 'pino/file',
+        level: config.get<string>('logging.logLevel'),
+        options: { destination: 1 }, // stdout
     };
 }
 
-function showError(error: Error, config: ConfigPort) {
-    if (!config.get('logging.showStackTraces')) return; // TODO: pretify error stack
-    return { stack: error.stack, message: error.message };
-}
+export const generatePinoOptions = (config: ConfigPort): Params => {
+    const requestIdHeader = config.get<string>('logging.requestIdHeader')!;
+    const targets = [fileRotationTarget(config), consoleTarget(config)].filter(
+        (target): target is TransportTargetOptions => !!target,
+    );
 
-export const generatePinoOptions = (config: ConfigPort) => {
     return {
         pinoHttp: {
             level: config.get<string>('logging.logLevel'),
             autoLogging: true,
-            transport: {
-                targets: [generateFileRotationTransport(config), generateConsolePrettyLogs(config)],
-            },
+            transport: { targets },
             genReqId: (req: Request) => {
-                const requestIdHeader = config.get<string>('logging.requestIdHeader')!;
                 const requestId = req.header(requestIdHeader) || randomUUID();
                 req.headers[requestIdHeader] = requestId;
                 req.id = requestId;
@@ -65,7 +79,7 @@ export const generatePinoOptions = (config: ConfigPort) => {
                 paths: [
                     'req.headers.authorization',
                     'req.headers.cookie',
-                    'res.headers.set-cookie',
+                    'res.headers["set-cookie"]',
                 ],
                 remove: true,
             }, // redact sensitive information
@@ -73,8 +87,8 @@ export const generatePinoOptions = (config: ConfigPort) => {
                 req: (req: IncomingMessage) => ({
                     method: req.method,
                     url: req.url,
-                    id: req.headers[config.get('logging.requestIdHeader')!],
-                    ip: req.socket?.remoteAddress, // TODO: test this later
+                    id: req.headers[requestIdHeader],
+                    ip: req.socket?.remoteAddress,
                     userAgent: req.headers['user-agent'],
                 }),
                 res: (res: Response) => ({
@@ -85,16 +99,18 @@ export const generatePinoOptions = (config: ConfigPort) => {
                 env: config.get<string>('app.env'),
                 requestId: req.id,
             }),
-            customAttributeKeys: { responseTime: 'latencyMs', hostname: hostname() },
-            timestamp: () => `, "timestamp": "${new Date(Date.now()).toISOString()}"`,
+            customAttributeKeys: { responseTime: 'latencyMs' },
+            base: { hostname: hostname(), pid: process.pid },
+            timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
             customSuccessMessage(req, res) {
                 return `OK ${req.method} ${req.url} ${res.statusCode}`;
             },
             customErrorMessage(req, res, err) {
-                return `ERR ${req.method} ${req.url} ${res.statusCode} - ${err.message} ${showError(err, config)?.stack ? `- ${showError(err, config)?.stack}` : ''}`;
+                return `ERR ${req.method} ${req.url} ${res.statusCode} - ${err.message}`;
             },
-            customLogLevel(req, res, err) {
-                if (err || res.statusCode >= 500) return 'silent';
+            // 5xx are logged with details by GlobalExceptionFilter; keep one access-log line here
+            customLogLevel(_req, res, err) {
+                if (err || res.statusCode >= 500) return 'error';
                 if (res.statusCode >= 400) return 'warn';
                 return 'info';
             },
