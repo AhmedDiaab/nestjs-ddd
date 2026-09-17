@@ -1,9 +1,11 @@
 import {
     ConfigPortToken,
     LoggerPortToken,
+    MetricsPortToken,
     RequestContextPortToken,
     type ConfigPort,
     type LoggerPort,
+    type MetricsPort,
     type RequestContextPort,
 } from '@application/ports';
 import { ProviderFactory } from '@common/factories';
@@ -17,9 +19,13 @@ import { HttpClientToken } from './http-client.token';
     providers: [
         ProviderFactory.factory(
             HttpClientToken,
-            (config: ConfigPort, logger: LoggerPort, context: RequestContextPort) =>
-                new FetchHttpClient(config, logger, context),
-            [ConfigPortToken, LoggerPortToken, RequestContextPortToken],
+            (
+                config: ConfigPort,
+                logger: LoggerPort,
+                context: RequestContextPort,
+                metrics: MetricsPort,
+            ) => new FetchHttpClient(config, logger, context, metrics),
+            [ConfigPortToken, LoggerPortToken, RequestContextPortToken, MetricsPortToken],
         ),
     ],
     exports: [HttpClientToken],

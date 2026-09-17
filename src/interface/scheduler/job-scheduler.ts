@@ -1,8 +1,10 @@
 import {
     ConfigPortToken,
     LoggerPortToken,
+    MetricsPortToken,
     type ConfigPort,
     type LoggerPort,
+    type MetricsPort,
 } from '@application/ports';
 import { Inject, Injectable, type OnApplicationBootstrap } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
@@ -20,6 +22,7 @@ export class JobScheduler implements OnApplicationBootstrap {
         @Inject(ScheduledJobsToken) private readonly jobs: readonly ScheduledJob[],
         @Inject(ConfigPortToken) private readonly config: ConfigPort,
         @Inject(LoggerPortToken) private readonly logger: LoggerPort,
+        @Inject(MetricsPortToken) private readonly metrics: MetricsPort,
         private readonly registry: SchedulerRegistry,
     ) {}
 
@@ -31,7 +34,7 @@ export class JobScheduler implements OnApplicationBootstrap {
 
         const timeZone = this.config.get('scheduler.timezone');
         for (const job of this.jobs) {
-            const runner = new JobRunner(job, this.logger);
+            const runner = new JobRunner(job, this.logger, this.metrics);
             const cronJob = new CronJob(
                 job.cronTime,
                 () => void runner.run(),

@@ -6,6 +6,7 @@ import {
     httpSchema,
     jwtSchema,
     loggingSchema,
+    metricsSchema,
     schedulerSchema,
     shutdownSchema,
 } from '@infrastructure/config/schemas';
@@ -21,6 +22,7 @@ const rootSchema = z.object({
     // optional: services without a database leave DATABASE_CONFIG_JSON unset
     database: databaseConfigSchema.optional(),
     jwt: jwtSchema,
+    metrics: metricsSchema,
     scheduler: schedulerSchema,
     shutdown: shutdownSchema,
 });
@@ -105,6 +107,11 @@ function hydrate() {
             issuer: envString(env.JWT_ISSUER),
             audience: envString(env.JWT_AUDIENCE),
             cookieName: envString(env.JWT_COOKIE_NAME),
+        },
+        metrics: {
+            enabled: envBool(env.METRICS_ENABLED),
+            defaultMetrics: envBool(env.METRICS_DEFAULT_METRICS),
+            path: envString(env.METRICS_PATH),
         },
         scheduler: {
             enabled: envBool(env.SCHEDULER_ENABLED),

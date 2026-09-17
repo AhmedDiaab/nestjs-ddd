@@ -5,6 +5,7 @@ import {
     type CallHandler,
     type ExecutionContext,
 } from '@nestjs/common';
+import type { Reflector } from '@nestjs/core';
 import { Result } from '@shared';
 import { lastValueFrom, of } from 'rxjs';
 
@@ -36,10 +37,16 @@ describe('ResponseFormatterInterceptor test suite', () => {
             getRequest: jest.fn().mockReturnValue(req),
             getResponse: jest.fn().mockReturnValue(res),
         }),
+        getHandler: jest.fn(),
+        getClass: jest.fn(),
     } as unknown as jest.Mocked<ExecutionContext>;
 
+    const reflector = {
+        getAllAndOverride: jest.fn().mockReturnValue(false),
+    } as unknown as Reflector;
+
     beforeEach(() => {
-        sut = new ResponseFormatterInterceptor();
+        sut = new ResponseFormatterInterceptor(reflector);
     });
 
     afterEach(() => {

@@ -1,4 +1,5 @@
-import type { LoggerPort } from '@application/ports';
+import type { LoggerPort, MetricsPort } from '@application/ports';
+import { Metrics } from '@infrastructure/metrics';
 import type { ScheduledJob } from './scheduled-job';
 
 /**
@@ -11,6 +12,7 @@ export class JobRunner {
     constructor(
         private readonly job: ScheduledJob,
         private readonly logger: LoggerPort,
+        private readonly metrics: MetricsPort,
     ) {}
 
     async run(): Promise<void> {
@@ -19,6 +21,7 @@ export class JobRunner {
                 job: this.job.name,
                 reason: 'still running',
             });
+            this.metrics.increment(Metrics.jobRuns, { job: this.job.name, outcome: 'skipped' });
             return;
         }
 
@@ -30,14 +33,24 @@ export class JobRunner {
                 job: this.job.name,
                 durationMs: Date.now() - started,
             });
+            this.record('succeeded', started);
         } catch (err) {
             this.logger.error('scheduler.job.failed', {
                 job: this.job.name,
                 durationMs: Date.now() - started,
                 err,
             });
+            this.record('failed', started);
         } finally {
             this.running = false;
         }
+    }
+
+    /** A job that silently stops running is the failure nobody notices; alert on these. */
+    private record(outcome: 'succeeded' | 'failed', started: number): void {
+        this.metrics.increment(Metrics.jobRuns, { job: this.job.name, outcome });
+        this.metrics.observe(Metrics.jobDuration, (Date.now() - started) / 1000, {
+            job: this.job.name,
+        });
     }
 }

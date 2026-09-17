@@ -1,4 +1,4 @@
-import type { ConfigPort, LoggerPort } from '@application/ports';
+import type { ConfigPort, LoggerPort, MetricsPort } from '@application/ports';
 import { JobScheduler, type ScheduledJob } from '@interface/scheduler';
 import type { SchedulerRegistry } from '@nestjs/schedule';
 import type { CronJob } from 'cron';
@@ -8,6 +8,8 @@ const job = (name: string, run = jest.fn(() => Promise.resolve())): ScheduledJob
     cronTime: '0 2 * * *',
     run,
 });
+
+const metrics: MetricsPort = { increment: jest.fn(), observe: jest.fn(), setGauge: jest.fn() };
 
 describe('JobScheduler', () => {
     const info = jest.fn();
@@ -29,7 +31,13 @@ describe('JobScheduler', () => {
     it('schedules nothing while the scheduler is disabled', () => {
         // Arrange
         const config = configWith({ 'scheduler.enabled': false, 'scheduler.timezone': 'UTC' });
-        const sut = new JobScheduler([job('tickets.closeStale')], config, logger, registry);
+        const sut = new JobScheduler(
+            [job('tickets.closeStale')],
+            config,
+            logger,
+            metrics,
+            registry,
+        );
 
         // Act
         sut.onApplicationBootstrap();
@@ -45,7 +53,13 @@ describe('JobScheduler', () => {
             'scheduler.enabled': true,
             'scheduler.timezone': 'Africa/Cairo',
         });
-        const sut = new JobScheduler([job('a.job'), job('b.job')], config, logger, registry);
+        const sut = new JobScheduler(
+            [job('a.job'), job('b.job')],
+            config,
+            logger,
+            metrics,
+            registry,
+        );
 
         // Act
         sut.onApplicationBootstrap();
@@ -64,7 +78,7 @@ describe('JobScheduler', () => {
         const run = jest.fn(() => Promise.reject(new Error('boom')));
         const failing = job('failing.job', run);
         const config = configWith({ 'scheduler.enabled': true, 'scheduler.timezone': 'UTC' });
-        new JobScheduler([failing], config, logger, registry).onApplicationBootstrap();
+        new JobScheduler([failing], config, logger, metrics, registry).onApplicationBootstrap();
 
         // Act
         await added.get('failing.job')?.fireOnTick();

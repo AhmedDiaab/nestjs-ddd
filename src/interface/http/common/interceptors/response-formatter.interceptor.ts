@@ -1,4 +1,5 @@
 import { Readable } from 'node:stream';
+import { RAW_RESPONSE } from '@interface/http/decorators';
 import {
     Injectable,
     StreamableFile,
@@ -7,6 +8,7 @@ import {
     type ExecutionContext,
     type NestInterceptor,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import {
     isEnvelope,
     isPresentableError,
@@ -22,12 +24,23 @@ import { map } from 'rxjs/operators';
 
 @Injectable()
 export class ResponseFormatterInterceptor implements NestInterceptor {
+    constructor(private readonly reflector: Reflector) {}
+
     intercept(ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
         const http = ctx.switchToHttp();
         const req = http.getRequest<Request>();
         const res = http.getResponse<Response>();
 
         if (req.headers[SKIP_FORMAT_HEADER]) return next.handle();
+        // @RawResponse(): the consumer defines the format (Prometheus, files, webhooks)
+        if (
+            this.reflector.getAllAndOverride<boolean>(RAW_RESPONSE, [
+                ctx.getHandler(),
+                ctx.getClass(),
+            ])
+        ) {
+            return next.handle();
+        }
         if (res.headersSent) return next.handle();
 
         const meta: Meta = {

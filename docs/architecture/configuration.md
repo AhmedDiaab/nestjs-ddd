@@ -62,6 +62,13 @@ Adding a variable: [Add a config variable](../guides/add-config-variable.md).
 | `SCHEDULER_ENABLED`                                         | `false`                         | run the cron jobs in this instance ([Operations → Scheduled jobs](operations.md#scheduled-jobs))                                |
 | `SCHEDULER_TIMEZONE`                                        | `UTC`                           | IANA timezone the cron expressions are read in                                                                                  |
 
+### Metrics
+
+| Variable                  | Default | Notes                                                                                        |
+| ------------------------- | ------- | -------------------------------------------------------------------------------------------- |
+| `METRICS_ENABLED`         | `false` | serves `GET /metrics` in the Prometheus text format; unauthenticated, keep the port internal |
+| `METRICS_DEFAULT_METRICS` | `true`  | Node and process metrics (heap, event loop lag, GC) alongside the application's own          |
+
 ### Shutdown
 
 | Variable                  | Default | Notes                                                                                                         |

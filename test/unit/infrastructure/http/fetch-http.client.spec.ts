@@ -1,4 +1,4 @@
-import type { ConfigPort, LoggerPort, RequestContextPort } from '@application/ports';
+import type { ConfigPort, LoggerPort, MetricsPort, RequestContextPort } from '@application/ports';
 import {
     CircuitOpenError,
     FetchHttpClient,
@@ -28,6 +28,8 @@ const jsonResponse = (status: number, body: unknown, headers: Record<string, str
         headers: { 'content-type': 'application/json', ...headers },
     });
 
+const metrics: MetricsPort = { increment: jest.fn(), observe: jest.fn(), setGauge: jest.fn() };
+
 const contextWith = (requestId?: string): RequestContextPort => ({
     run: (_context, fn) => fn(),
     get: () => (requestId ? { requestId } : undefined),
@@ -49,7 +51,7 @@ describe('FetchHttpClient', () => {
         const fetchImpl = jest
             .fn()
             .mockResolvedValue(jsonResponse(200, { id: 'a-1' }, { 'X-Upstream': 'accounts' }));
-        const sut = new FetchHttpClient(configWith(), logger, contextWith(), fetchImpl);
+        const sut = new FetchHttpClient(configWith(), logger, contextWith(), metrics, fetchImpl);
 
         // Act
         const response = await sut.request<{ id: string }>({
@@ -67,7 +69,7 @@ describe('FetchHttpClient', () => {
     it('returns a 404 instead of throwing, so the gateway decides what it means', async () => {
         // Arrange
         const fetchImpl = jest.fn().mockResolvedValue(jsonResponse(404, { error: 'missing' }));
-        const sut = new FetchHttpClient(configWith(), logger, contextWith(), fetchImpl);
+        const sut = new FetchHttpClient(configWith(), logger, contextWith(), metrics, fetchImpl);
 
         // Act
         const response = await sut.request({
@@ -84,7 +86,13 @@ describe('FetchHttpClient', () => {
     it('sends the correlation id of the incoming request', async () => {
         // Arrange
         const fetchImpl = jest.fn().mockResolvedValue(jsonResponse(200, {}));
-        const sut = new FetchHttpClient(configWith(), logger, contextWith('req-42'), fetchImpl);
+        const sut = new FetchHttpClient(
+            configWith(),
+            logger,
+            contextWith('req-42'),
+            metrics,
+            fetchImpl,
+        );
 
         // Act
         await sut.request({
@@ -101,7 +109,7 @@ describe('FetchHttpClient', () => {
     it('leaves the correlation header out when there is no request context', async () => {
         // Arrange: a cron job, not an HTTP request
         const fetchImpl = jest.fn().mockResolvedValue(jsonResponse(200, {}));
-        const sut = new FetchHttpClient(configWith(), logger, contextWith(), fetchImpl);
+        const sut = new FetchHttpClient(configWith(), logger, contextWith(), metrics, fetchImpl);
 
         // Act
         await sut.request({
@@ -118,7 +126,7 @@ describe('FetchHttpClient', () => {
     it('appends query parameters and drops the undefined ones', async () => {
         // Arrange
         const fetchImpl = jest.fn().mockResolvedValue(jsonResponse(200, {}));
-        const sut = new FetchHttpClient(configWith(), logger, contextWith(), fetchImpl);
+        const sut = new FetchHttpClient(configWith(), logger, contextWith(), metrics, fetchImpl);
 
         // Act
         await sut.request({
@@ -139,7 +147,7 @@ describe('FetchHttpClient', () => {
             .fn()
             .mockResolvedValueOnce(jsonResponse(503, {}))
             .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
-        const sut = new FetchHttpClient(configWith(), logger, contextWith(), fetchImpl);
+        const sut = new FetchHttpClient(configWith(), logger, contextWith(), metrics, fetchImpl);
 
         // Act
         const response = await sut.request({
@@ -161,6 +169,7 @@ describe('FetchHttpClient', () => {
             configWith(),
             logger,
             contextWith(),
+            metrics,
             fetchImpl as unknown as typeof fetch,
         );
 
@@ -179,7 +188,7 @@ describe('FetchHttpClient', () => {
     it('does not repeat a POST, because the upstream may already have acted', async () => {
         // Arrange
         const fetchImpl = jest.fn().mockResolvedValue(jsonResponse(503, {}));
-        const sut = new FetchHttpClient(configWith(), logger, contextWith(), fetchImpl);
+        const sut = new FetchHttpClient(configWith(), logger, contextWith(), metrics, fetchImpl);
 
         // Act
         const response = await sut.request({
@@ -200,7 +209,7 @@ describe('FetchHttpClient', () => {
             .fn()
             .mockResolvedValueOnce(jsonResponse(503, {}))
             .mockResolvedValueOnce(jsonResponse(200, {}));
-        const sut = new FetchHttpClient(configWith(), logger, contextWith(), fetchImpl);
+        const sut = new FetchHttpClient(configWith(), logger, contextWith(), metrics, fetchImpl);
 
         // Act
         const response = await sut.request({
@@ -219,7 +228,7 @@ describe('FetchHttpClient', () => {
     it('does not repeat a 400: the request itself is wrong', async () => {
         // Arrange
         const fetchImpl = jest.fn().mockResolvedValue(jsonResponse(400, {}));
-        const sut = new FetchHttpClient(configWith(), logger, contextWith(), fetchImpl);
+        const sut = new FetchHttpClient(configWith(), logger, contextWith(), metrics, fetchImpl);
 
         // Act
         await sut.request({
@@ -246,6 +255,7 @@ describe('FetchHttpClient', () => {
             configWith({ 'httpClient.timeoutMs': 10, 'httpClient.retries': 0 }),
             logger,
             contextWith(),
+            metrics,
             fetchImpl as unknown as typeof fetch,
         );
 
@@ -263,7 +273,7 @@ describe('FetchHttpClient', () => {
     it('turns a connection failure into an unavailable error after its retries', async () => {
         // Arrange
         const fetchImpl = jest.fn().mockRejectedValue(new TypeError('fetch failed'));
-        const sut = new FetchHttpClient(configWith(), logger, contextWith(), fetchImpl);
+        const sut = new FetchHttpClient(configWith(), logger, contextWith(), metrics, fetchImpl);
 
         // Act
         const call = sut.request({
@@ -284,6 +294,7 @@ describe('FetchHttpClient', () => {
             configWith({ 'httpClient.circuitEnabled': true, 'httpClient.retries': 0 }),
             logger,
             contextWith(),
+            metrics,
             fetchImpl as unknown as typeof fetch,
         );
         const call = () =>
@@ -312,6 +323,7 @@ describe('FetchHttpClient', () => {
             configWith({ 'httpClient.circuitEnabled': true, 'httpClient.retries': 0 }),
             logger,
             contextWith(),
+            metrics,
             fetchImpl as unknown as typeof fetch,
         );
         const failing = () =>
@@ -342,6 +354,7 @@ describe('FetchHttpClient', () => {
             configWith({ 'httpClient.retries': 0 }),
             logger,
             contextWith(),
+            metrics,
             fetchImpl,
         );
 

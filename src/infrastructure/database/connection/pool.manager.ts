@@ -20,7 +20,7 @@ import {
     UnknownSourceKeyError,
     type DbHealthFailure,
 } from '@infrastructure/database/errors';
-import type { ConnectionOptions } from '@infrastructure/database/types';
+import type { ConnectionOptions, PoolStats } from '@infrastructure/database/types';
 import { delay, expoBackoff, jitterDelay, Semaphore } from '@infrastructure/database/utils';
 import { Inject, Injectable, type OnModuleDestroy } from '@nestjs/common';
 import oracledb from 'oracledb';
@@ -266,6 +266,15 @@ export class PoolManager implements ConnectionProviderContract, OnModuleDestroy 
         if (failures.length > 0) {
             throw new AggregateDbHealthError(failures);
         }
+    }
+
+    /** Cheap: reads the driver's counters, no round trip, so a scrape costs nothing. */
+    poolStats(): Record<string, PoolStats | undefined> {
+        const stats: Record<string, PoolStats | undefined> = {};
+        for (const [key, client] of this.clients.entries()) {
+            if (client.implemented) stats[key] = client.stats();
+        }
+        return stats;
     }
 
     async health(timeoutMs = 3000): Promise<SourceHealth[]> {

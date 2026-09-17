@@ -101,7 +101,9 @@ A repository is not "any class with SQL": a read-only list belongs in a DAO even
 | **ConnectionProvider**  | how adapters get a connection: `withConnection`, `transaction`, `runInTransaction`                        |
 | **HttpClient**          | infrastructure contract for one outbound call: timeout, retries, circuit breaker, correlation header      |
 | **Circuit breaker**     | stops calling an upstream that keeps failing, then lets one trial call through                            |
-| **Request context**     | the correlation id of the current request, carried through async calls (`RequestContextPort`)             |
+| **Request context**     | the correlation id and trace of the current request, carried through async calls (`RequestContextPort`)   |
+| **Trace id / span id**  | W3C Trace Context: one id shared by every service handling a request, and this service's part of it       |
+| **Metric labels**       | the dimensions of a metric; bounded values only (route templates, tags), never ids or URLs                |
 | **Context user**        | the acting username sent to Oracle as `CLIENT_IDENTIFIER` for one call, then cleared                      |
 | **Draining**            | the window after SIGTERM where readiness fails but the instance still serves what it already accepted     |
 | **Tag**                 | a label like `tickets.save` attached to a call for logs and errors, never the SQL text                    |

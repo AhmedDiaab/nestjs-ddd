@@ -4,7 +4,11 @@ import { InterfaceModule } from '@interface';
 import { GlobalExceptionFilter } from '@interface/http';
 import { FallbackController } from '@interface/http/common/fallback/fallback.controller';
 import { ResponseFormatterInterceptor } from '@interface/http/common/interceptors/response-formatter.interceptor';
-import { DatabaseInfoController, HealthController } from '@interface/http/controllers';
+import {
+    DatabaseInfoController,
+    HealthController,
+    MetricsController,
+} from '@interface/http/controllers';
 import { ZodHttpInterceptor } from '@interface/http/interceptors/zod-http.interceptor';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 
@@ -17,7 +21,12 @@ const provides = (token: unknown) => (provider: object) =>
 describe('InterfaceModule composition', () => {
     it('exposes the expected controllers with the fallback last', () => {
         // Arrange
-        const expected = [HealthController, DatabaseInfoController, FallbackController];
+        const expected = [
+            HealthController,
+            MetricsController,
+            DatabaseInfoController,
+            FallbackController,
+        ];
 
         // Act
         const controllers = metadata('controllers');

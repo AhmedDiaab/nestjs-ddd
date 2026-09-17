@@ -12,6 +12,8 @@ export {
 
 export { type LoggerPort } from './logger.port';
 
+export { type MetricLabels, type MetricsPort, MetricsPortToken } from './metrics.port';
+
 export {
     type RequestContext,
     type RequestContextPort,

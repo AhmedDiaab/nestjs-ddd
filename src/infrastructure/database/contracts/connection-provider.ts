@@ -53,4 +53,6 @@ export interface ConnectionProvider {
     pingAll(opts?: PingAllOptions): Promise<void>;
     /** Non-throwing per-source health, for readiness probes */
     health(timeoutMs?: number): Promise<SourceHealth[]>;
+    /** Pool counters per source, without touching the database (for metrics) */
+    poolStats(): Record<string, PoolStats | undefined>;
 }

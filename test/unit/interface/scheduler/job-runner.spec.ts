@@ -1,5 +1,7 @@
-import type { LoggerPort } from '@application/ports';
+import type { LoggerPort, MetricsPort } from '@application/ports';
 import { JobRunner } from '@interface/scheduler';
+
+const metrics: MetricsPort = { increment: jest.fn(), observe: jest.fn(), setGauge: jest.fn() };
 
 describe('JobRunner', () => {
     const info = jest.fn();
@@ -15,6 +17,7 @@ describe('JobRunner', () => {
         const sut = new JobRunner(
             { name: 'tickets.closeStale', cronTime: '0 2 * * *', run },
             logger,
+            metrics,
         );
 
         // Act
@@ -38,6 +41,7 @@ describe('JobRunner', () => {
                 run: () => Promise.reject(failure),
             },
             logger,
+            metrics,
         );
 
         // Act
@@ -55,7 +59,11 @@ describe('JobRunner', () => {
         // Arrange
         let finishFirst = () => {};
         const run = jest.fn(() => new Promise<void>((resolve) => (finishFirst = resolve)));
-        const sut = new JobRunner({ name: 'slow.job', cronTime: '* * * * *', run }, logger);
+        const sut = new JobRunner(
+            { name: 'slow.job', cronTime: '* * * * *', run },
+            logger,
+            metrics,
+        );
         const first = sut.run();
 
         // Act
@@ -74,7 +82,11 @@ describe('JobRunner', () => {
     it('runs again once the previous run finished', async () => {
         // Arrange
         const run = jest.fn(() => Promise.resolve());
-        const sut = new JobRunner({ name: 'quick.job', cronTime: '* * * * *', run }, logger);
+        const sut = new JobRunner(
+            { name: 'quick.job', cronTime: '* * * * *', run },
+            logger,
+            metrics,
+        );
         await sut.run();
 
         // Act

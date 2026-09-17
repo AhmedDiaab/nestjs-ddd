@@ -1,6 +1,7 @@
-import type { ConfigPort, LoggerPort, RequestContextPort } from '@application/ports';
+import type { ConfigPort, LoggerPort, MetricsPort, RequestContextPort } from '@application/ports';
 import { formatTraceparent, newSpanId } from '@infrastructure/context';
 import { delay } from '@infrastructure/database/utils';
+import { Metrics } from '@infrastructure/metrics';
 import { CircuitBreaker } from './circuit-breaker';
 import type { HttpClient, HttpRequest, HttpResponse } from './contracts';
 import { CircuitOpenError, UpstreamTimeoutError, UpstreamUnavailableError } from './errors';
@@ -27,6 +28,7 @@ export class FetchHttpClient implements HttpClient {
         private readonly config: ConfigPort,
         private readonly logger: LoggerPort,
         private readonly context: RequestContextPort,
+        private readonly metrics: MetricsPort,
         private readonly fetchImpl: typeof fetch = fetch,
     ) {}
 
@@ -46,6 +48,10 @@ export class FetchHttpClient implements HttpClient {
                     target,
                     retryInMs: blockedForMs,
                 });
+                this.metrics.increment(Metrics.httpClientCircuitOpen, {
+                    tag: request.tag,
+                    target,
+                });
                 throw new CircuitOpenError(target, blockedForMs);
             }
 
@@ -63,6 +69,7 @@ export class FetchHttpClient implements HttpClient {
                     retryable && attempt < retries && isRetryableStatus(response.status);
                 if (!canRetry) {
                     this.log(response.status, request, target, durationMs, attempt);
+                    this.record(request, target, String(response.status), durationMs);
                     return response;
                 }
 
@@ -76,14 +83,17 @@ export class FetchHttpClient implements HttpClient {
             breaker?.recordFailure();
 
             if (!retryable || attempt >= retries) {
+                const reason =
+                    outcome.error instanceof UpstreamTimeoutError ? 'timeout' : 'transport';
                 this.logger.error('http.client.failed', {
                     tag: request.tag,
                     target,
                     method: request.method,
                     durationMs,
                     attempts: attempt + 1,
-                    reason: outcome.error instanceof UpstreamTimeoutError ? 'timeout' : 'transport',
+                    reason,
                 });
+                this.record(request, target, reason, durationMs);
                 throw outcome.error;
             }
 
@@ -202,6 +212,7 @@ export class FetchHttpClient implements HttpClient {
             retryAfterMs: cause.retryAfterMs,
         });
 
+        this.metrics.increment(Metrics.httpClientRetries, { tag: request.tag, target });
         this.logger.warn('http.client.retry', {
             tag: request.tag,
             target,
@@ -212,6 +223,23 @@ export class FetchHttpClient implements HttpClient {
         });
 
         await delay(waitMs);
+    }
+
+    private record(
+        request: HttpRequest,
+        target: string,
+        outcome: string,
+        durationMs: number,
+    ): void {
+        this.metrics.increment(Metrics.httpClientRequests, {
+            tag: request.tag,
+            target,
+            outcome,
+        });
+        this.metrics.observe(Metrics.httpClientDuration, durationMs / 1000, {
+            tag: request.tag,
+            target,
+        });
     }
 
     private log(
