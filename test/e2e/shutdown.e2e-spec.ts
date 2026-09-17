@@ -67,13 +67,13 @@ describe('Shutdown (e2e)', () => {
         draining = true;
 
         // Act
-        const [live, page] = await Promise.all([
+        const [live, unknown] = await Promise.all([
             request(app.getHttpServer()).get('/health'),
-            request(app.getHttpServer()).get('/v1'),
+            request(app.getHttpServer()).get('/v1/anything'),
         ]);
 
         // Assert: the load balancer is told to stop sending, the port stays open
         expect(live.status).toBe(200);
-        expect(page.status).toBe(200);
+        expect(unknown.status).toBe(404); // answered, not refused: the port is still open
     });
 });

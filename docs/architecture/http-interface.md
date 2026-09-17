@@ -67,7 +67,7 @@ Keep HTTP schemas structural (types, formats, enums, ranges). Business rules (tr
 
 - `JwtStrategy` (`src/infrastructure/auth/strategies/jwt.strategy.ts`) reads the token from the cookie named by `JWT_COOKIE_NAME` (default `jwt`), falling back to `Authorization: Bearer`. It verifies the secret, `JWT_ALGORITHMS`, `JWT_ISSUER` and `JWT_AUDIENCE`.
 - `JwtGuard` is registered **globally** (`APP_GUARD` in `interface.module.ts`): every route needs a valid token unless it is marked `@Public()`. A new route is protected by default; forgetting a decorator gives a 401, not an open endpoint.
-- `@Public()` (`decorators/public.decorator.ts`) opens one handler or a whole controller. Public in the template: `HealthController`, `FallbackController` (unknown paths stay 404) and the root controller.
+- `@Public()` (`decorators/public.decorator.ts`) opens one handler or a whole controller. Public in the template: `HealthController`, `MetricsController` and `FallbackController` (unknown paths stay 404).
 - `@Roles('admin', 'auditor')` requires one of those roles from `JWTPayload.roles`; the global `RolesGuard` answers **403** when none match. Routes without `@Roles()` are unaffected. Roles that live in a table instead of the token go through a query port ([guide](../guides/add-an-auth-strategy.md#authorization-that-needs-the-database)).
 - `@UseGuards(JwtGuard)` still works for a per-controller setup; adding another strategy or making authentication opt-in: [Add an authentication strategy](../guides/add-an-auth-strategy.md).
 - `@CurrentUser()` injects `req.user` (`JWTPayload`); `@CurrentUser('username')` injects one field.
@@ -114,8 +114,8 @@ URI versioning with default `1`: routes are `/v1/...`. Health routes are `VERSIO
 
 | Controller               | Routes                                                                                                      |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `AppController`          | `GET /v1`: hello (sample)                                                                                   |
 | `HealthController`       | `GET /health`, `GET /health/ready` (see [Operations](operations.md#health-endpoints))                       |
+| `MetricsController`      | `GET /metrics` when `METRICS_ENABLED` (see [Observability](observability.md))                               |
 | `DatabaseInfoController` | `GET /v1/database-info` (JWT): shows the DB name, session user and the `CLIENT_IDENTIFIER` the database saw |
 | `FallbackController`     | any unmatched route → 404                                                                                   |
 

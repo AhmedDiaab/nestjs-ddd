@@ -65,7 +65,7 @@ export class TicketsController {
 }
 ```
 
-Already public in the template: `HealthController` (monitors poll it), `FallbackController` (unknown paths answer 404 instead of 401) and the root `AppController`.
+Already public in the template: `HealthController` (monitors poll it), `MetricsController` (a scraper has no token) and `FallbackController` (unknown paths answer 404 instead of 401).
 
 **Keep the list of `@Public()` routes short and reviewed.** It is the whole attack surface that needs no token.
 

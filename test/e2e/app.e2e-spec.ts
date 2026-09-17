@@ -33,20 +33,32 @@ describe('App (e2e, no database configured)', () => {
         await app.close();
     });
 
-    it('GET /v1 wraps the response in the envelope with the request id', async () => {
+    it('wraps a response in the envelope with the request id the caller sent', async () => {
         // Arrange
         const requestId = 'e2e-1';
 
         // Act
-        const res = await request(app.getHttpServer()).get('/v1').set('x-request-id', requestId);
+        const res = await request(app.getHttpServer())
+            .get('/health')
+            .set('x-request-id', requestId);
 
         // Assert
         expect(res.status).toBe(200);
         expect(res.body as Envelope).toMatchObject({
             success: true,
-            data: 'Hello World!',
-            meta: { path: '/v1', requestId },
+            data: { status: 'ok' },
+            meta: { path: '/health', requestId },
         });
+    });
+
+    it('serves no sample endpoint at the API root', async () => {
+        // Arrange: a template that ships a demo route ships it to production
+
+        // Act
+        const res = await request(app.getHttpServer()).get('/v1');
+
+        // Assert
+        expect(res.status).toBe(404);
     });
 
     it('GET /health is version neutral', async () => {

@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import { ApplicationModule } from '@application';
 import { InfrastructureModule } from '@infrastructure/infrastructure.module';
 import { InterfaceModule } from '@interface/interface.module';
-import { AppController } from '@src/app.controller';
 import { AppModule } from '@src/app.module';
 
 jest.mock('dotenv-flow/config', () => undefined);
@@ -23,13 +22,15 @@ describe('AppModule layering', () => {
         expect(imports).toEqual(expect.arrayContaining(layers));
     });
 
-    it('registers the root controller', () => {
+    it('declares nothing of its own: endpoints and providers belong to the layers', () => {
         // Arrange: AppModule metadata
 
         // Act
         const controllers = getMetadata<object>('controllers', AppModule);
+        const providers = getMetadata<object>('providers', AppModule);
 
         // Assert
-        expect(controllers).toContain(AppController);
+        expect(controllers).toEqual([]);
+        expect(providers).toEqual([]);
     });
 });
