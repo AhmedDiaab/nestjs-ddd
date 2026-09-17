@@ -2,6 +2,11 @@ export { type ConfigPort } from './config.port';
 
 export { type LoggerPort } from './logger.port';
 
-export { ConfigPortToken, DatabaseInfoRepositoryPortToken, LoggerPortToken } from './tokens';
+export { ConfigPortToken, LoggerPortToken } from './tokens';
 
-export type { DatabaseInfo, DatabaseInfoRepositoryPort } from './repositories';
+export {
+    type DatabaseInfo,
+    type DatabaseInfoQueryPort,
+    DatabaseInfoQueryPortToken,
+    type QueryOptions,
+} from './queries';

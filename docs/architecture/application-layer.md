@@ -47,13 +47,14 @@ Declare the failure union in the type parameters so callers and tests see what c
 
 ## Ports
 
-| File                                                  | Port                                                                             | Implemented by      |
-| ----------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------- |
-| `ports/config.port.ts`                                | `ConfigPort`: `get<T>('dot.path')`, `isDevelopment()`, `isProduction()`, `all()` | `EnvConfigAdapter`  |
-| `ports/logger.port.ts`                                | `LoggerPort`: `debug/info/warn/error(message, meta)`                             | `PinoLoggerAdapter` |
-| `ports/repositories/database-info.repository.port.ts` | example read port                                                                | `DatabaseInfoDao`   |
-| `ports/queries/*`                                     | read models for responses (added per feature)                                    | query DAOs          |
-| `ports/tokens.ts`                                     | tokens for the cross-cutting ports                                               | n/a                 |
+| File                                        | Port                                                                             | Implemented by         |
+| ------------------------------------------- | -------------------------------------------------------------------------------- | ---------------------- |
+| `ports/config.port.ts`                      | `ConfigPort`: `get<T>('dot.path')`, `isDevelopment()`, `isProduction()`, `all()` | `EnvConfigAdapter`     |
+| `ports/logger.port.ts`                      | `LoggerPort`: `debug/info/warn/error(message, meta)`                             | `PinoLoggerAdapter`    |
+| `ports/queries/database-info.query.port.ts` | example query port + token                                                       | `DatabaseInfoQueryDao` |
+| `ports/queries/query-options.ts`            | `QueryOptions` (`{ actor }`) shared by query ports                               | n/a                    |
+| `ports/queries/*`                           | read models for responses (added per feature)                                    | query DAOs             |
+| `ports/tokens.ts`                           | tokens for the cross-cutting ports                                               | n/a                    |
 
 Read-model types (e.g. `TicketSummary`) are plain serialisable objects: ISO date strings, no class instances.
 

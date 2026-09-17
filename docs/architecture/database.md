@@ -15,7 +15,7 @@
 | Oracle helpers                | `clients/oracle/*`                                 | driver init (thick mode, `fetchAsString`), pool attribute mapping, error mapper                               |
 | `NotImplementedClient`        | `clients/not-implemented.client.ts`                | placeholder; throws `UnsupportedDialectError` (501)                                                           |
 | Source keys                   | `sources.ts`                                       | `DatabaseSources.main`: keys DAOs use (must match config `key`)                                               |
-| Example DAO                   | `dao/database-info.dao.ts`                         | implements `DatabaseInfoRepositoryPort`                                                                       |
+| Example query DAO             | `queries/database-info-query.dao.ts`               | implements `DatabaseInfoQueryPort`                                                                            |
 
 ## Using it from a DAO or repository
 

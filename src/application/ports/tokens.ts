@@ -1,7 +1,6 @@
 import { createToken } from '@shared';
 import type { ConfigPort } from './config.port';
 import type { LoggerPort } from './logger.port';
-import type { DatabaseInfoRepositoryPort } from './repositories';
 
 /**
  * DI tokens for application ports. Interfaces vanish at runtime, so Nest needs a value to
@@ -11,7 +10,3 @@ import type { DatabaseInfoRepositoryPort } from './repositories';
 export const ConfigPortToken = createToken<ConfigPort>('ConfigPort');
 
 export const LoggerPortToken = createToken<LoggerPort>('LoggerPort');
-
-export const DatabaseInfoRepositoryPortToken = createToken<DatabaseInfoRepositoryPort>(
-    'DatabaseInfoRepositoryPort',
-);

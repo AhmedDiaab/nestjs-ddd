@@ -14,6 +14,7 @@ For reads shaped for responses (details, lists, reports, stored-procedure output
 // src/application/ports/queries/ticket.query.port.ts
 import { createToken } from '@shared';
 import type { PageEnvelope } from '@shared/pagination';
+import type { QueryOptions } from './query-options';
 
 /** Read model: shaped for API responses, not a domain entity. */
 export type TicketSummary = {
@@ -37,11 +38,6 @@ export type PageRequest<Sort extends string> = {
     orderBy: Sort;
 };
 
-export type QueryOptions = {
-    /** Username for DB auditing (Oracle CLIENT_IDENTIFIER). */
-    actor?: string;
-};
-
 export interface TicketQueryPort {
     findById(id: string, options?: QueryOptions): Promise<TicketSummary | undefined>;
     list(
@@ -54,7 +50,7 @@ export interface TicketQueryPort {
 export const TicketQueryPortToken = createToken<TicketQueryPort>('TicketQueryPort');
 ```
 
-Export it from `src/application/ports/queries/index.ts` and add `export * from './queries';` to `src/application/ports/index.ts` (once).
+Export it from `src/application/ports/queries/index.ts` and add the new names to the `./queries` export list in `src/application/ports/index.ts` (named exports only, no `export *`). `QueryOptions` (`{ actor }`) is shared by all query ports in `ports/queries/query-options.ts`.
 
 Rules:
 

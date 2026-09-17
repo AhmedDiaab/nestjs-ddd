@@ -52,7 +52,7 @@ src/
 │       ├── clients/        # DatabaseClient, OracleClient, NotImplementedClient, oracle/ helpers
 │       ├── connection/     # PoolManager, ConnectionProvider factory + token
 │       ├── contracts/      # ConnectionProvider interface (infra-internal port)
-│       ├── dao/            # port implementations (example: DatabaseInfoDao)
+│       ├── queries/        # query DAOs (example: DatabaseInfoQueryDao)
 │       ├── errors/         # DatabaseConnectionError, DatabaseExecutionError, ...
 │       ├── types/ utils/
 │       ├── sources.ts      # source keys used by DAOs/repositories

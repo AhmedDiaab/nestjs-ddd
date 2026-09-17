@@ -1,7 +1,7 @@
 import {
-    DatabaseInfoRepositoryPortToken,
+    DatabaseInfoQueryPortToken,
     type DatabaseInfo,
-    type DatabaseInfoRepositoryPort,
+    type DatabaseInfoQueryPort,
 } from '@application/ports';
 import { UseCase } from '@common/base';
 import { Inject, Injectable } from '@nestjs/common';
@@ -22,14 +22,14 @@ type Output = DatabaseInfo;
 @Injectable()
 export class GetDatabaseInfoUseCase extends UseCase<Input, Output, never> {
     constructor(
-        @Inject(DatabaseInfoRepositoryPortToken)
-        private readonly repository: DatabaseInfoRepositoryPort,
+        @Inject(DatabaseInfoQueryPortToken)
+        private readonly databaseInfo: DatabaseInfoQueryPort,
     ) {
         super();
     }
 
     async execute(input: Input): Promise<Result<Output, never>> {
-        const info = await this.repository.getInfo(input.username);
+        const info = await this.databaseInfo.getInfo({ actor: input.username });
         return this.ok(info);
     }
 }

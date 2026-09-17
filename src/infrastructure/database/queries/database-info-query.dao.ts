@@ -1,4 +1,4 @@
-import type { DatabaseInfo, DatabaseInfoRepositoryPort } from '@application/ports';
+import type { DatabaseInfo, DatabaseInfoQueryPort, QueryOptions } from '@application/ports';
 import type { ConnectionProvider } from '@infrastructure/database/contracts';
 import { DatabaseSources } from '@infrastructure/database/sources';
 import oracledb, { type Connection } from 'oracledb';
@@ -12,13 +12,13 @@ type DatabaseInfoRow = {
 /**
  * Example DAO:
  * - depends on the `ConnectionProvider` contract (pools already initialised and pinged)
- * - passes the end user as `contextUser` → Oracle CLIENT_IDENTIFIER for this call only
+ * - passes the acting user (`options.actor`) as `contextUser` → Oracle CLIENT_IDENTIFIER for this call only
  * - maps named columns (outFormat OBJECT) to the port type; no positional row indexes
  */
-export class DatabaseInfoDao implements DatabaseInfoRepositoryPort {
+export class DatabaseInfoQueryDao implements DatabaseInfoQueryPort {
     constructor(private readonly db: ConnectionProvider) {}
 
-    getInfo(contextUser?: string): Promise<DatabaseInfo> {
+    getInfo(options?: QueryOptions): Promise<DatabaseInfo> {
         const sql = `
             SELECT
                 SYS_CONTEXT('USERENV', 'DB_NAME') AS database_name,
@@ -42,7 +42,7 @@ export class DatabaseInfoDao implements DatabaseInfoRepositoryPort {
                     clientIdentifier: row.CLIENT_IDENTIFIER,
                 };
             },
-            { contextUser, tag: 'databaseInfo.getInfo' },
+            { contextUser: options?.actor, tag: 'databaseInfo.getInfo' },
         );
     }
 }
