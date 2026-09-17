@@ -4,6 +4,27 @@ Background: [Testing](../architecture/testing.md). Run `pnpm test`, `pnpm test:e
 
 Files mirror `src`: `src/domain/tickets/ticket.entity.ts` → `test/unit/domain/tickets/ticket.entity.spec.ts`.
 
+Every test follows **Arrange-Act-Assert**, marked with comments and separated by blank lines:
+
+```ts
+it('refuses to close twice', () => {
+    // Arrange
+    const ticket = open();
+    ticket.close('bob', now);
+
+    // Act
+    const second = ticket.close('bob', now);
+
+    // Assert
+    expect(!second.ok && second.error).toBeInstanceOf(TicketAlreadyClosedError);
+});
+```
+
+- One Act per test (one call to the unit under test). Setting up earlier state belongs in Arrange.
+- Shared setup in `beforeEach` counts as Arrange; the test keeps only what is specific to it.
+- For a rejected promise, keep the call in Act (`const call = sut.run()`) and `await expect(call).rejects…` in Assert.
+- When Arrange is empty, write `// Arrange: nothing` or merge as `// Act & Assert` only for one-line checks.
+
 ## Domain
 
 Pure tests, no mocks.
@@ -353,13 +374,18 @@ Notes:
 
 ## Real database
 
-Unit and e2e tests don't touch Oracle. To check SQL against a real database:
+Unit and e2e tests don't touch Oracle. The live suite in `test/integration` runs `OracleClient` against a real database (see [Testing › Live Oracle tests](../architecture/testing.md#live-oracle-tests)):
 
 ```bash
-docker run -d --name oracle -p 1521:1521 -e ORACLE_PASSWORD=pw gvenzl/oracle-free
-# create tables, then in .env.development:
-DATABASE_CONFIG_JSON='[{"key":"main","dialect":"oracle","connectString":"localhost:1521/FREEPDB1","user":"system","passwordEnv":"MAIN_DB_PASSWORD"}]'
-MAIN_DB_PASSWORD=pw
+docker compose --env-file .env.docker up -d oracle
+ORACLE_IT_PASSWORD=<app user password> pnpm test:oracle
+```
+
+Add feature SQL checks there as `*.int-spec.ts` (create and drop their own tables). To try endpoints manually, point `.env.development` at the same database:
+
+```bash
+DATABASE_CONFIG_JSON='[{"key":"main","dialect":"oracle","connectString":"localhost:1521/FREEPDB1","user":"app","passwordEnv":"MAIN_DB_PASSWORD"}]'
+MAIN_DB_PASSWORD=<app user password>
 pnpm start:dev
 ```
 

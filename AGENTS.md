@@ -64,6 +64,7 @@ Details: [`docs/architecture/overview.md`](docs/architecture/overview.md).
 - **Errors to clients** expose `message`/`code`/`type` only; put diagnostics in `details` (logs only).
 - **Style**: Prettier (4 spaces, single quotes, width 100), `import type` for types, barrel `index.ts` per folder, file names `kebab-case.<kind>.ts` (`*.use-case.ts`, `*.controller.ts`, `*.dao.ts`, `*.repository.ts`, `*.error.ts`, `*.vo.ts`, `*.entity.ts`, `*.schema.ts`, `*.port.ts`).
 - **Tests** mirror `src` under `test/unit`; fakes in `test/fakes`; HTTP flows in `test/e2e` with `.overrideProvider(Token).useValue(fake)`.
+- **Test structure**: Arrange-Act-Assert in every test, with `// Arrange`, `// Act`, `// Assert` comments and a blank line between sections; one Act per test ([guide](docs/guides/write-tests.md)).
 
 ## How to do common tasks
 

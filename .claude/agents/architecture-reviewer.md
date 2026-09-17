@@ -61,6 +61,7 @@ You review diffs in a NestJS 11 layered/DDD codebase. Be precise and brief. Repo
     - Adapter SQL/binds/options
     - HTTP statuses for new endpoints
     - Fakes typed as their ports
+    - Arrange-Act-Assert with `// Arrange` / `// Act` / `// Assert` comments, one Act per test
 11. **Docs**: behaviour/config/convention changes reflected in `docs/` (and a decision record if a documented decision is reversed).
 
 Optionally run `pnpm typecheck && pnpm lint && pnpm check:circular` to confirm. Don't edit files.

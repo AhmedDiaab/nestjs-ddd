@@ -59,4 +59,4 @@ Mock `ConnectionProvider` (`withConnection`/`transaction` call `fn(connection)`)
 - SQL fragments, exact binds
 - mapping
 
-See `docs/guides/write-tests.md#infrastructure-adapters`. Then run `pnpm verify`.
+Structure every test as Arrange-Act-Assert (`// Arrange`, `// Act`, `// Assert`). See `docs/guides/write-tests.md#infrastructure-adapters`. Then run `pnpm verify`.

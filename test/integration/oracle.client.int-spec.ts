@@ -73,95 +73,122 @@ describeLive('OracleClient (live Oracle)', () => {
     });
 
     it('pings', async () => {
-        await expect(sut.ping(3000)).resolves.toBeUndefined();
+        // Arrange
+        const timeoutMs = 3000;
+
+        // Act
+        const ping = sut.ping(timeoutMs);
+
+        // Assert
+        await expect(ping).resolves.toBeUndefined();
     });
 
     it('sets CLIENT_IDENTIFIER for the call and clears it before the session is reused', async () => {
-        const inside = await sut.withConnection(currentSession, { contextUser: 'it-alice' });
+        // Arrange
+        const contextUser = 'it-alice';
+
+        // Act
+        const inside = await sut.withConnection(currentSession, { contextUser });
         const next = await sut.withConnection(currentSession);
 
-        expect(inside.clientId).toBe('it-alice');
+        // Assert
+        expect(inside.clientId).toBe(contextUser);
         expect(next.sid).toBe(inside.sid); // same pooled session
         expect(next.clientId).toBeNull();
     });
 
     it('clears CLIENT_IDENTIFIER when the callback throws', async () => {
+        // Arrange
         let sid = '';
-        await expect(
-            sut.withConnection(
-                async (conn: Connection) => {
-                    sid = (await currentSession(conn)).sid;
-                    throw new Error('boom');
-                },
-                { contextUser: 'it-bob' },
-            ),
-        ).rejects.toThrow('boom');
+        const failingCall = async (conn: Connection) => {
+            sid = (await currentSession(conn)).sid;
+            throw new Error('boom');
+        };
 
+        // Act
+        const call = sut.withConnection(failingCall, { contextUser: 'it-bob' });
+        await expect(call).rejects.toThrow('boom');
         const next = await sut.withConnection(currentSession);
+
+        // Assert
         expect(next.sid).toBe(sid);
         expect(next.clientId).toBeNull();
     });
 
     it('truncates the context user to maxLength bytes', async () => {
-        const inside = await sut.withConnection(currentSession, { contextUser: 'x'.repeat(100) });
+        // Arrange
+        const contextUser = 'x'.repeat(100);
+
+        // Act
+        const inside = await sut.withConnection(currentSession, { contextUser });
+
+        // Assert
         expect(inside.clientId).toBe('x'.repeat(64));
     });
 
     it('commits a transaction', async () => {
-        await sut.transaction((conn: Connection) =>
-            conn.execute(`INSERT INTO ${table} (ID, NAME) VALUES (:id, :name)`, {
-                id: 1,
-                name: 'committed',
-            }),
-        );
+        // Arrange
+        const row = { id: 1, name: 'committed' };
 
-        const count = await sut.withConnection((conn: Connection) =>
-            conn.execute<Row>(
-                `SELECT COUNT(*) AS N FROM ${table} WHERE ID = :id`,
-                { id: 1 },
-                {
-                    outFormat: oracledb.OUT_FORMAT_OBJECT,
-                },
-            ),
-        );
-        expect(count.rows![0].N).toBe(1);
+        // Act
+        await sut.transaction((conn: Connection) => insertRow(conn, row));
+
+        // Assert
+        expect(await countRows(row.id)).toBe(1);
     });
 
     it('rolls back a transaction when the callback throws', async () => {
-        await expect(
-            sut.transaction(async (conn: Connection) => {
-                await conn.execute(`INSERT INTO ${table} (ID, NAME) VALUES (:id, :name)`, {
-                    id: 2,
-                    name: 'rolled back',
-                });
-                throw new Error('abort');
-            }),
-        ).rejects.toThrow('abort');
+        // Arrange
+        const row = { id: 2, name: 'rolled back' };
+        const failingWrite = async (conn: Connection) => {
+            await insertRow(conn, row);
+            throw new Error('abort');
+        };
 
-        const count = await sut.withConnection((conn: Connection) =>
-            conn.execute<Row>(
-                `SELECT COUNT(*) AS N FROM ${table} WHERE ID = :id`,
-                { id: 2 },
-                {
-                    outFormat: oracledb.OUT_FORMAT_OBJECT,
-                },
-            ),
-        );
-        expect(count.rows![0].N).toBe(0);
+        // Act
+        const write = sut.transaction(failingWrite);
+
+        // Assert
+        await expect(write).rejects.toThrow('abort');
+        expect(await countRows(row.id)).toBe(0);
     });
 
     it('maps a unique constraint violation (ORA-00001) to ConflictError', async () => {
-        await expect(
-            sut.transaction((conn: Connection) =>
-                conn.execute(`INSERT INTO ${table} (ID, NAME) VALUES (:id, :name)`, {
-                    id: 1,
-                    name: 'duplicate',
-                }),
-            ),
-        ).rejects.toBeInstanceOf(ConflictError);
+        // Arrange
+        const duplicate = { id: 3, name: 'duplicate' };
+        await sut.transaction((conn: Connection) => insertRow(conn, duplicate));
+
+        // Act
+        const write = sut.transaction((conn: Connection) => insertRow(conn, duplicate));
+
+        // Assert
+        await expect(write).rejects.toBeInstanceOf(ConflictError);
     });
 
     it('never logged a failed context clear', () => {
-        expect(warn).not.toHaveBeenCalledWith('db.context.clear.failed', expect.anything());
+        // Arrange: the calls made by the tests above
+
+        // Act
+        const clearFailures = warn.mock.calls.filter(
+            ([event]) => event === 'db.context.clear.failed',
+        );
+
+        // Assert
+        expect(clearFailures).toHaveLength(0);
     });
+
+    function insertRow(conn: Connection, row: { id: number; name: string }) {
+        return conn.execute(`INSERT INTO ${table} (ID, NAME) VALUES (:id, :name)`, row);
+    }
+
+    function countRows(id: number): Promise<unknown> {
+        return sut.withConnection(async (conn: Connection) => {
+            const result = await conn.execute<Row>(
+                `SELECT COUNT(*) AS N FROM ${table} WHERE ID = :id`,
+                { id },
+                { outFormat: oracledb.OUT_FORMAT_OBJECT },
+            );
+            return result.rows![0].N;
+        });
+    }
 });

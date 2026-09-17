@@ -24,6 +24,10 @@ test/
 
 Path aliases (`@domain`, `@src`, …) work in tests through `jest.config.ts` / `test/jest-e2e.json` `moduleNameMapper`. Import fakes and fixtures with relative paths.
 
+## Test structure
+
+Every test uses **Arrange-Act-Assert** with `// Arrange`, `// Act`, `// Assert` comments and one Act per test. Rules and examples: [Write tests](../guides/write-tests.md).
+
 ## What to test where
 
 | Layer                         | Test style                                                                                                                                                              | Doubles                           |
