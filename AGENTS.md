@@ -62,7 +62,7 @@ Details: [`docs/architecture/overview.md`](docs/architecture/overview.md).
 - **Config**: new env vars go through a Zod schema + `envString`/`envBool`/`envList` in `env-config.adapter.ts`, `.env.example`, and `docs/architecture/configuration.md`. Read via `ConfigPortToken`.
 - **Logging**: inject `LoggerPortToken`; dotted event names (`tickets.close.rejected`) + meta object. Never log secrets, tokens, bind values or unnecessary personal data.
 - **Errors to clients** expose `message`/`code`/`type` only; put diagnostics in `details` (logs only).
-- **Style**: Prettier (4 spaces, single quotes, width 100), `import type` for types, barrel `index.ts` per folder, file names `kebab-case.<kind>.ts` (`*.use-case.ts`, `*.controller.ts`, `*.dao.ts`, `*.repository.ts`, `*.error.ts`, `*.vo.ts`, `*.entity.ts`, `*.schema.ts`, `*.port.ts`).
+- **Style**: Prettier (4 spaces, single quotes, width 100), `import type` for types, barrel `index.ts` per folder with **named exports only** (`export { Foo, type Bar } from './foo'`; `export *` is a lint error, see [decision 0007](docs/decisions/0007-named-barrel-exports.md)), file names `kebab-case.<kind>.ts` (`*.use-case.ts`, `*.controller.ts`, `*.dao.ts`, `*.repository.ts`, `*.error.ts`, `*.vo.ts`, `*.entity.ts`, `*.schema.ts`, `*.port.ts`).
 - **Tests** mirror `src` under `test/unit`; fakes in `test/fakes`; HTTP flows in `test/e2e` with `.overrideProvider(Token).useValue(fake)`.
 - **Test structure**: Arrange-Act-Assert in every test, with `// Arrange`, `// Act`, `// Assert` comments and a blank line between sections; one Act per test ([guide](docs/guides/write-tests.md)).
 

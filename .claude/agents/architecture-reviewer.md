@@ -55,6 +55,7 @@ You review diffs in a NestJS 11 layered/DDD codebase. Be precise and brief. Repo
     - New env vars go through a schema + `env*` helper and are documented in `.env.example` and `docs/architecture/configuration.md`.
     - No loosening of CORS/helmet/throttling/JWT checks without explicit request.
 9. **Singletons**: no `Scope.REQUEST`.
+    - Barrels list named exports; no `export *`.
 10. **Tests**
     - Domain rules
     - Every use-case failure path

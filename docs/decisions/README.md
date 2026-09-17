@@ -10,6 +10,7 @@ Short records of choices that shape the codebase. Read the relevant one before c
 | [0004](0004-result-errors-to-http-status.md)  | Expected failures are `Result` values mapped to HTTP status by problem kind | Accepted |
 | [0005](0005-json-database-sources.md)         | Database sources configured as JSON; dialect placeholders kept              | Accepted |
 | [0006](0006-singleton-providers.md)           | Singleton providers; no request-scoped DI                                   | Accepted |
+| [0007](0007-named-barrel-exports.md)          | Barrels list named exports; no `export *`                                   | Accepted |
 
 Template for a new record (`NNNN-short-title.md`):
 

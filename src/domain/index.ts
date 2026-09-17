@@ -1,3 +1,3 @@
-export * from './base';
+export { AggregateRoot, type DomainEvent, Entity, ValueObject } from './base';
 
-export * from './errors';
+export { AggregateNotFoundError, DomainError, ValidationError } from './errors';

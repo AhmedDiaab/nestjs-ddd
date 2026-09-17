@@ -54,6 +54,7 @@ Domain → ports → use cases → adapters → HTTP → tests. After each layer
     - `{ contextUser: options?.actor, tag }` on every call
 - Controllers: `@UseZodHttp` + `@Validated`, pass `user.username`, return the use-case result.
 - Tokens via `createToken<Port>()`; bindings via `ProviderFactory`.
+- Barrels: named exports only (`export { Foo, type Bar } from './foo'`), never `export *`.
 - Tests: Arrange-Act-Assert with `// Arrange`, `// Act`, `// Assert` comments, one Act per test.
 
 ## 5. Finish

@@ -165,11 +165,24 @@ export { Ticket, type TicketClosed, type TicketProps, type TicketStatus } from '
 export { TicketTitle } from './ticket-title.vo';
 
 // src/domain/index.ts
-export * from './base';
-export * from './errors';
-export * from './repositories';
-export * from './tickets';
+export { AggregateRoot, type DomainEvent, Entity, ValueObject } from './base';
+export { AggregateNotFoundError, DomainError, ValidationError } from './errors';
+export {
+    type RepositoryOptions,
+    type TicketRepository,
+    TicketRepositoryToken,
+} from './repositories';
+export {
+    Ticket,
+    TicketAlreadyClosedError,
+    type TicketClosed,
+    type TicketProps,
+    type TicketStatus,
+    TicketTitle,
+} from './tickets';
 ```
+
+List every public name; `export *` is a lint error ([decision 0007](../decisions/0007-named-barrel-exports.md)). Mark types with `type`.
 
 ## 5. Test
 

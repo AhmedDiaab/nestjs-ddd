@@ -103,6 +103,7 @@ See [Diagrams](diagrams.md) for sequence diagrams.
 - **Typed tokens**: `createToken<Port>('Name')`; `ProviderFactory` refuses mismatched bindings at compile time.
 - **Expected failures are values**: return `Result.err(new SomeAppError())`; throw only for the unexpected. See [Application layer](application-layer.md).
 - **Map rows in infrastructure**, never in domain; use `outFormat: OBJECT` and named columns.
+- **Barrels use named exports**: each `index.ts` lists what it exposes (`export { Foo, type Bar } from './foo'`); `export *` fails lint. See [decision 0007](../decisions/0007-named-barrel-exports.md).
 - **Pass the end user down** as `actor`/`contextUser` so Oracle sees it as `CLIENT_IDENTIFIER`.
 
 ## Related

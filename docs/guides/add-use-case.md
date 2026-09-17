@@ -153,7 +153,13 @@ export { ListTicketsUseCase } from './list-tickets.use-case';
 export { OpenTicketUseCase } from './open-ticket.use-case';
 
 // src/application/use-cases/index.ts
-export * from './tickets';
+export { GetDatabaseInfoUseCase } from './get-database-info.use-case';
+export {
+    CloseTicketUseCase,
+    GetTicketUseCase,
+    ListTicketsUseCase,
+    OpenTicketUseCase,
+} from './tickets';
 ```
 
 ```ts
