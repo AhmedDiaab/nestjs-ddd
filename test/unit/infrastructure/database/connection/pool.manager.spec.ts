@@ -26,7 +26,13 @@ const postgres = {
 
 describe('PoolManager', () => {
     const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
-    let connection: { ping: jest.Mock; close: jest.Mock };
+    let connection: {
+        ping: jest.Mock;
+        close: jest.Mock;
+        execute: jest.Mock;
+        commit: jest.Mock;
+        rollback: jest.Mock;
+    };
     let pool: { getConnection: jest.Mock; close: jest.Mock };
     let sut: PoolManager;
 
@@ -34,6 +40,9 @@ describe('PoolManager', () => {
         connection = {
             ping: jest.fn(() => Promise.resolve()),
             close: jest.fn(() => Promise.resolve()),
+            execute: jest.fn(() => Promise.resolve({ rows: [] })),
+            commit: jest.fn(() => Promise.resolve()),
+            rollback: jest.fn(() => Promise.resolve()),
         };
         pool = {
             getConnection: jest.fn(() => Promise.resolve(connection)),
@@ -135,5 +144,73 @@ describe('PoolManager', () => {
 
         // Assert
         expect(pool.close).toHaveBeenCalledWith(10);
+    });
+
+    describe('runInTransaction', () => {
+        type Executor = { execute: (sql: string) => Promise<unknown> };
+        const write = (sql: string) => (conn: Executor) => conn.execute(sql);
+
+        beforeEach(async () => {
+            await sut.init(config([oracle]));
+        });
+
+        it('shares one connection and commits once for calls made inside the work', async () => {
+            // Arrange
+            const work = async () => {
+                await sut.withConnection('main', write('INSERT 1'));
+                await sut.transaction('main', write('INSERT 2'));
+                return 'done';
+            };
+
+            // Act
+            const result = await sut.runInTransaction('main', work, { contextUser: 'alice' });
+
+            // Assert
+            expect(result).toBe('done');
+            expect(pool.getConnection).toHaveBeenCalledTimes(1);
+            expect(connection.execute).toHaveBeenCalledTimes(2);
+            expect(connection.commit).toHaveBeenCalledTimes(1);
+            expect(connection.rollback).not.toHaveBeenCalled();
+        });
+
+        it('rolls back everything when the work throws', async () => {
+            // Arrange
+            const work = async () => {
+                await sut.transaction('main', write('INSERT 1'));
+                throw new Error('second write failed');
+            };
+
+            // Act
+            const run = sut.runInTransaction('main', work);
+
+            // Assert
+            await expect(run).rejects.toThrow('second write failed');
+            expect(connection.commit).not.toHaveBeenCalled();
+            expect(connection.rollback).toHaveBeenCalledTimes(1);
+        });
+
+        it('joins an outer unit instead of opening a nested transaction', async () => {
+            // Arrange
+            const inner = () => sut.transaction('main', write('INSERT inner'));
+            const outer = () => sut.runInTransaction('main', inner);
+
+            // Act
+            await sut.runInTransaction('main', outer);
+
+            // Assert
+            expect(pool.getConnection).toHaveBeenCalledTimes(1);
+            expect(connection.commit).toHaveBeenCalledTimes(1);
+        });
+
+        it('stops sharing the connection once the unit has finished', async () => {
+            // Arrange
+            await sut.runInTransaction('main', () => Promise.resolve());
+
+            // Act
+            await sut.withConnection('main', write('SELECT after'));
+
+            // Assert
+            expect(pool.getConnection).toHaveBeenCalledTimes(2);
+        });
     });
 });

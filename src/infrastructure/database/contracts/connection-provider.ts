@@ -35,6 +35,15 @@ export interface ConnectionProvider {
         fn: (conn: C) => Promise<T>,
         options?: ConnectionOptions,
     ): Promise<T>;
+    /**
+     * One transaction around `work`; adapter calls for the same source inside it share its
+     * connection. Backs the application `UnitOfWorkPort`.
+     */
+    runInTransaction<T>(
+        sourceKey: string,
+        work: () => Promise<T>,
+        options?: ConnectionOptions,
+    ): Promise<T>;
     /** True if a sourceKey is configured */
     hasSource(sourceKey: string): boolean;
     /** Return the configured dialect for a sourceKey */

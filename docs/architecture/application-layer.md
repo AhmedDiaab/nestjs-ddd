@@ -54,6 +54,7 @@ Declare the failure union in the type parameters so callers and tests see what c
 | `ports/queries/database-info.query.port.ts` | example query port + token                                                          | `DatabaseInfoQueryDao` |
 | `ports/queries/query-options.ts`            | `QueryOptions` (`{ actor }`) shared by query ports                                  | n/a                    |
 | `ports/queries/*`                           | read models for responses (added per feature)                                       | query DAOs             |
+| `ports/unit-of-work.port.ts`                | `UnitOfWorkPort.run(work, { actor })`: atomic multi-repository writes               | `DatabaseUnitOfWork`   |
 | `ports/tokens.ts`                           | tokens for the cross-cutting ports                                                  | n/a                    |
 
 Read-model types (e.g. `TicketSummary`) are plain serialisable objects: ISO date strings, no class instances.

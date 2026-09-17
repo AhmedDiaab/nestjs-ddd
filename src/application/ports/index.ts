@@ -15,3 +15,9 @@ export {
     DatabaseInfoQueryPortToken,
     type QueryOptions,
 } from './queries';
+
+export {
+    type UnitOfWorkOptions,
+    type UnitOfWorkPort,
+    UnitOfWorkPortToken,
+} from './unit-of-work.port';

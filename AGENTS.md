@@ -57,7 +57,7 @@ Details: [`docs/architecture/overview.md`](docs/architecture/overview.md).
     - `ORDER BY` from a whitelist map
     - avoid keyword bind names (`:offset`, `:fetch`, `:size`, `:date`)
     - `outFormat: oracledb.OUT_FORMAT_OBJECT` + named columns; map rows in `infrastructure/database/mappers`, never in domain
-    - writes inside `db.transaction(...)`
+    - writes inside `db.transaction(...)`; several aggregates atomically → `UnitOfWorkPort.run(...)` in the use case, never connections in use cases
     - pass `{ contextUser: options?.actor, tag: 'feature.method' }` on every call
 - **Actor**: controllers pass `user.username` → use case input `username` → port option `actor` → adapter `contextUser` (Oracle `CLIENT_IDENTIFIER`).
 - **Config**: new env vars go through a Zod schema + `envString`/`envBool`/`envList` in `env-config.adapter.ts`, `.env.example`, and `docs/architecture/configuration.md`. Read via `ConfigPortToken`.

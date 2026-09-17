@@ -47,6 +47,7 @@ Every test uses **Arrange-Act-Assert** with `// Arrange`, `// Act`, `// Assert` 
 - `env-config.adapter.spec.ts`: defaults for unset env, list/bool parsing, **no secrets in errors**.
 - `provider.factory.spec.ts`: typed-token binding checks (`@ts-expect-error`, verified by `pnpm typecheck`).
 - `app.e2e-spec.ts`: envelope, request id, health, 404, 401 without a database.
+- `unit-of-work.int-spec.ts` (live): repository-style writes inside `DatabaseUnitOfWork` commit together with the actor as `CLIENT_IDENTIFIER`, and roll back together on a failed `Result` or a thrown error.
 - `oracle.client.int-spec.ts` (live): `CLIENT_IDENTIFIER` visible inside the call and `NULL` on the next borrow of the **same session** (pool of 1), also after the callback throws; byte truncation; commit/rollback; `ORA-00001` → `ConflictError`.
 
 ## Live Oracle tests

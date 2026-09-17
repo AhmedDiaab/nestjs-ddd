@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type { LoggerPort } from '@application/ports';
 import { LoggerPortToken } from '@application/ports';
 import type { DatabaseConfig, DatabaseSource } from '@infrastructure/config/schemas';
@@ -29,6 +30,8 @@ type Dialect = DatabaseSource['dialect'];
 @Injectable()
 export class PoolManager implements ConnectionProviderContract, OnModuleDestroy {
     private clients = new Map<string, DatabaseClient>();
+    /** Connections of transactions opened by `runInTransaction`, per source, for the current async flow. */
+    private readonly activeTransactions = new AsyncLocalStorage<ReadonlyMap<string, unknown>>();
     private meta = new Map<string, { dialect: Dialect; defaultSchema?: string }>();
 
     constructor(
@@ -106,6 +109,8 @@ export class PoolManager implements ConnectionProviderContract, OnModuleDestroy 
         fn: (conn: C) => Promise<T>,
         options?: ConnectionOptions,
     ): Promise<T> {
+        const joined = this.joinedConnection<C>(sourceKey);
+        if (joined) return fn(joined.connection);
         return this.client(sourceKey).withConnection(fn, options);
     }
 
@@ -114,7 +119,36 @@ export class PoolManager implements ConnectionProviderContract, OnModuleDestroy 
         fn: (conn: C) => Promise<T>,
         options?: ConnectionOptions,
     ): Promise<T> {
+        // inside runInTransaction: join the outer transaction, which commits or rolls back once
+        const joined = this.joinedConnection<C>(sourceKey);
+        if (joined) return fn(joined.connection);
         return this.client(sourceKey).transaction(fn, options);
+    }
+
+    /**
+     * Runs `work` in one transaction on `sourceKey`. Every `withConnection`/`transaction` call for
+     * that source made inside `work` (in the same async flow) reuses the transaction's connection
+     * instead of borrowing its own, so repositories write atomically without passing connections.
+     * Commits when `work` resolves, rolls back when it throws. Nested calls join the outer one.
+     * The context user of the outer call applies to all joined calls.
+     */
+    async runInTransaction<T>(
+        sourceKey: string,
+        work: () => Promise<T>,
+        options?: ConnectionOptions,
+    ): Promise<T> {
+        if (this.joinedConnection(sourceKey)) return work();
+
+        return this.client(sourceKey).transaction(async (connection: unknown) => {
+            const active = new Map(this.activeTransactions.getStore() ?? []);
+            active.set(sourceKey, connection);
+            return this.activeTransactions.run(active, work);
+        }, options);
+    }
+
+    private joinedConnection<C>(sourceKey: string): { connection: C } | undefined {
+        const store = this.activeTransactions.getStore();
+        return store?.has(sourceKey) ? { connection: store.get(sourceKey) as C } : undefined;
     }
 
     async ping(sourceKey: string, timeoutMs = 3000): Promise<boolean> {

@@ -1,4 +1,4 @@
-import { DatabaseInfoQueryPortToken } from '@application/ports';
+import { DatabaseInfoQueryPortToken, UnitOfWorkPortToken } from '@application/ports';
 import { ProviderFactory } from '@common/factories';
 import {
     ConnectionProvider,
@@ -7,6 +7,7 @@ import {
 } from '@infrastructure/database/connection';
 import type { ConnectionProvider as IConnectionProvider } from '@infrastructure/database/contracts';
 import { DatabaseInfoQueryDao } from '@infrastructure/database/queries';
+import { DatabaseUnitOfWork } from '@infrastructure/database/unit-of-work';
 import { Global, Module } from '@nestjs/common';
 
 @Global()
@@ -21,7 +22,12 @@ import { Global, Module } from '@nestjs/common';
             (db: IConnectionProvider) => new DatabaseInfoQueryDao(db),
             [ConnectionProviderToken],
         ),
+        ProviderFactory.factory(
+            UnitOfWorkPortToken,
+            (db: IConnectionProvider) => new DatabaseUnitOfWork(db),
+            [ConnectionProviderToken],
+        ),
     ],
-    exports: [ConnectionProviderToken, DatabaseInfoQueryPortToken],
+    exports: [ConnectionProviderToken, DatabaseInfoQueryPortToken, UnitOfWorkPortToken],
 })
 export class DatabaseModule {}

@@ -208,4 +208,34 @@ See [Write tests](write-tests.md).
 
 ## Multiple aggregates in one transaction
 
-`ConnectionProvider.transaction` spans one callback on one source. If a use case must save several aggregates atomically, add an application `UnitOfWork` port whose infrastructure implementation opens one transaction and hands repositories the same connection. Don't pass connections through use cases.
+`ConnectionProvider.transaction` spans one callback. To save several aggregates atomically, inject `UnitOfWorkPortToken` in the use case and wrap the repository calls:
+
+```ts
+// src/application/use-cases/tickets/merge-tickets.use-case.ts (excerpt)
+constructor(
+    @Inject(TicketRepositoryToken) private readonly tickets: TicketRepository,
+    @Inject(UnitOfWorkPortToken) private readonly unitOfWork: UnitOfWorkPort,
+) {
+    super();
+}
+
+async execute({ sourceId, targetId, username }: Input): Promise<Result<Output, Failure>> {
+    return this.unitOfWork.run(
+        async () => {
+            const source = await this.tickets.findById(sourceId, { actor: username });
+            if (!source) return this.err(new NotFoundError('Ticket not found'));
+            // ... change both aggregates
+            await this.tickets.save(source, { actor: username });
+            await this.tickets.save(target, { actor: username });
+            return this.ok({ id: targetId });
+        },
+        { actor: username },
+    );
+}
+```
+
+- Repositories don't change: their `withConnection`/`transaction` calls on the same source join the unit's transaction (same connection, no own commit).
+- Commit happens once when `work` succeeds. A thrown error **or a returned failed `Result`** rolls everything back; the failed `Result` is still returned.
+- The unit covers the `main` source only; there are no transactions spanning two databases.
+- The unit's `actor` is the context user for every joined call.
+- Never pass connections through use cases.
