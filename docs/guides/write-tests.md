@@ -23,7 +23,8 @@ it('refuses to close twice', () => {
 - One Act per test (one call to the unit under test). Setting up earlier state belongs in Arrange.
 - Shared setup in `beforeEach` counts as Arrange; the test keeps only what is specific to it.
 - For a rejected promise, keep the call in Act (`const call = sut.run()`) and `await expect(call).rejects…` in Assert.
-- When Arrange is empty, write `// Arrange: nothing` or merge as `// Act & Assert` only for one-line checks.
+- When setup already happened (in `beforeEach`, or the input comes from an `it.each` table), keep the marker with a note: `// Arrange: ticket opened in beforeEach`.
+- Several inputs for one behaviour: use `it.each` so each case still has one Act.
 
 ## Domain
 
@@ -40,9 +41,38 @@ const title = (raw = 'Printer is down') => {
 };
 
 describe('TicketTitle', () => {
-    it.each(['', '   ', 'x'.repeat(TicketTitle.MAX_LENGTH + 1)])('rejects %p', (raw) => {
+    it('trims the value', () => {
+        // Arrange
+        const raw = '  Printer  ';
+
+        // Act
         const result = TicketTitle.create(raw);
+
+        // Assert
+        expect(result.ok && result.value.value).toBe('Printer');
+    });
+
+    it.each(['', '   ', 'x'.repeat(TicketTitle.MAX_LENGTH + 1)])('rejects %p', (raw) => {
+        // Arrange: raw from table
+
+        // Act
+        const result = TicketTitle.create(raw);
+
+        // Assert
+        expect(result.ok).toBe(false);
         expect(!result.ok && result.error).toBeInstanceOf(ValidationError);
+    });
+
+    it('compares by value', () => {
+        // Arrange
+        const a = title('A');
+        const trimmedA = title(' A ');
+
+        // Act
+        const equal = a.equals(trimmedA);
+
+        // Assert
+        expect(equal).toBe(true);
     });
 });
 
@@ -50,20 +80,44 @@ describe('Ticket', () => {
     const now = new Date('2026-01-01T10:00:00Z');
     const open = () => Ticket.open({ id: 't-1', title: title(), createdBy: 'alice', now });
 
+    it('opens with status open and no events', () => {
+        // Arrange
+        const input = { id: 't-1', title: title(), createdBy: 'alice', now };
+
+        // Act
+        const ticket = Ticket.open(input);
+
+        // Assert
+        expect(ticket.status).toBe('open');
+        expect(ticket.pullEvents()).toEqual([]);
+    });
+
     it('closes once and records TicketClosed', () => {
+        // Arrange
         const ticket = open();
         const later = new Date('2026-01-02T10:00:00Z');
 
-        expect(ticket.close('bob', later).ok).toBe(true);
+        // Act
+        const result = ticket.close('bob', later);
+
+        // Assert
+        expect(result.ok).toBe(true);
+        expect(ticket.status).toBe('closed');
+        expect(ticket.closedAt).toEqual(later);
         expect(ticket.pullEvents()).toEqual([
             { name: 'TicketClosed', occurredAt: later, ticketId: 't-1', closedBy: 'bob' },
         ]);
     });
 
     it('refuses to close twice', () => {
+        // Arrange
         const ticket = open();
         ticket.close('bob', now);
+
+        // Act
         const second = ticket.close('bob', now);
+
+        // Assert
         expect(!second.ok && second.error).toBeInstanceOf(TicketAlreadyClosedError);
     });
 });
@@ -153,9 +207,19 @@ describe('ticket use cases', () => {
         closeTicket = new CloseTicketUseCase(tickets.repository);
     });
 
-    it('opens a ticket and saves it as the acting user', async () => {
-        const result = await openTicket.execute({ title: 'Printer', username: 'alice' });
+    const openExisting = async () => {
+        const opened = await openTicket.execute({ title: 'Printer', username: 'alice' });
+        return opened.ok ? opened.value.id : '';
+    };
 
+    it('opens a ticket and saves it as the acting user', async () => {
+        // Arrange
+        const input = { title: 'Printer', username: 'alice' };
+
+        // Act
+        const result = await openTicket.execute(input);
+
+        // Assert
         expect(result.ok).toBe(true);
         const id = result.ok ? result.value.id : '';
         expect(tickets.store.get(id)?.createdBy).toBe('alice');
@@ -163,24 +227,49 @@ describe('ticket use cases', () => {
     });
 
     it('returns a ValidationError for an empty title without saving', async () => {
-        const result = await openTicket.execute({ title: ' ', username: 'alice' });
+        // Arrange
+        const input = { title: ' ', username: 'alice' };
 
+        // Act
+        const result = await openTicket.execute(input);
+
+        // Assert
         expect(!result.ok && result.error).toBeInstanceOf(ValidationError);
         expect(tickets.store.size).toBe(0);
     });
 
+    it('closes an open ticket', async () => {
+        // Arrange
+        const id = await openExisting();
+
+        // Act
+        const result = await closeTicket.execute({ id, username: 'bob' });
+
+        // Assert
+        expect(result).toEqual({ ok: true, value: { id, status: 'closed' } });
+        expect(tickets.store.get(id)?.status).toBe('closed');
+    });
+
     it('returns NotFoundError for an unknown ticket', async () => {
-        const result = await closeTicket.execute({ id: 'missing', username: 'bob' });
+        // Arrange
+        const input = { id: 'missing', username: 'bob' };
+
+        // Act
+        const result = await closeTicket.execute(input);
+
+        // Assert
         expect(!result.ok && result.error).toBeInstanceOf(NotFoundError);
     });
 
     it('returns TicketAlreadyClosedError when closing twice', async () => {
-        const opened = await openTicket.execute({ title: 'Printer', username: 'alice' });
-        const id = opened.ok ? opened.value.id : '';
+        // Arrange
+        const id = await openExisting();
         await closeTicket.execute({ id, username: 'bob' });
 
+        // Act
         const result = await closeTicket.execute({ id, username: 'bob' });
 
+        // Assert
         expect(!result.ok && result.error).toBeInstanceOf(TicketAlreadyClosedError);
     });
 });
@@ -213,6 +302,7 @@ describe('OracleTicketRepository', () => {
     afterEach(() => jest.clearAllMocks());
 
     it('maps a row to the Ticket aggregate and passes the actor as context user', async () => {
+        // Arrange
         connection.execute.mockResolvedValueOnce({
             rows: [
                 {
@@ -226,16 +316,31 @@ describe('OracleTicketRepository', () => {
             ],
         });
 
+        // Act
         const ticket = await sut.findById('t-1', { actor: 'bob' });
 
+        // Assert
         expect(ticket).toBeInstanceOf(Ticket);
+        expect(ticket?.title.value).toBe('Printer');
         expect(db.withConnection).toHaveBeenCalledWith('main', expect.any(Function), {
             contextUser: 'bob',
             tag: 'tickets.findById',
         });
     });
 
+    it('returns undefined when no row matches', async () => {
+        // Arrange
+        connection.execute.mockResolvedValueOnce({ rows: [] });
+
+        // Act
+        const ticket = await sut.findById('missing');
+
+        // Assert
+        expect(ticket).toBeUndefined();
+    });
+
     it('saves inside a transaction with bind values from the aggregate', async () => {
+        // Arrange
         const title = TicketTitle.create('Printer');
         if (!title.ok) throw title.error;
         const ticket = Ticket.open({
@@ -245,8 +350,10 @@ describe('OracleTicketRepository', () => {
             now: new Date('2026-01-01T00:00:00Z'),
         });
 
+        // Act
         await sut.save(ticket, { actor: 'alice' });
 
+        // Assert
         expect(db.transaction).toHaveBeenCalledWith('main', expect.any(Function), {
             contextUser: 'alice',
             tag: 'tickets.save',
@@ -268,10 +375,14 @@ Query DAO paging:
 
 ```ts
 it('fetches size + 1 rows to compute hasNext and uses fixed ORDER BY SQL', async () => {
+    // Arrange
     connection.execute.mockResolvedValueOnce({ rows: [row('1'), row('2'), row('3')] });
+    const pageRequest = { page: 2, size: 2, orderBy: 'title:asc' } as const;
 
-    const page = await sut.list({}, { page: 2, size: 2, orderBy: 'title:asc' }, { actor: 'bob' });
+    // Act
+    const page = await sut.list({}, pageRequest, { actor: 'bob' });
 
+    // Assert
     expect(page.data.map((t) => t.id)).toEqual(['1', '2']);
     expect(page.meta).toEqual({ hasNext: true, hasPrev: true });
     const [sql, binds] = connection.execute.mock.calls[0] as [string, Record<string, unknown>];
@@ -339,29 +450,114 @@ describe('Tickets API (e2e, in-memory persistence)', () => {
     afterAll(() => app.close());
 
     const api = () => request(app.getHttpServer());
-    const auth = () => ({ Authorization: `Bearer ${token}` });
+    const auth = { Authorization: '' };
+    beforeEach(() => {
+        auth.Authorization = `Bearer ${token}`;
+        tickets.store.clear();
+    });
+
+    const openTicket = async (title = 'Printer') => {
+        const res = await api().post('/v1/tickets').set(auth).send({ title }).expect(201);
+        return (res.body as { data: { id: string } }).data.id;
+    };
 
     it('requires authentication', async () => {
-        await api().get('/v1/tickets').expect(401);
+        // Arrange: no Authorization header
+
+        // Act
+        const res = await api().get('/v1/tickets');
+
+        // Assert
+        expect(res.status).toBe(401);
     });
 
-    it('opens, reads and closes a ticket', async () => {
-        const opened = await api()
-            .post('/v1/tickets')
-            .set(auth())
-            .send({ title: 'Printer' })
-            .expect(201);
-        const id = (opened.body as { data: { id: string } }).data.id;
+    it('opens a ticket', async () => {
+        // Arrange
+        const body = { title: 'Printer' };
 
-        await api().get(`/v1/tickets/${id}`).set(auth()).expect(200);
-        await api().post(`/v1/tickets/${id}/close`).set(auth()).expect(200);
-        await api().post(`/v1/tickets/${id}/close`).set(auth()).expect(409);
+        // Act
+        const res = await api().post('/v1/tickets').set(auth).send(body);
+
+        // Assert
+        expect(res.status).toBe(201);
+        const { success, data } = res.body as { success: boolean; data: { id: string } };
+        expect(success).toBe(true);
+        expect(tickets.store.has(data.id)).toBe(true);
     });
 
-    it('maps domain validation to 422 and bad input to 400', async () => {
-        await api().post('/v1/tickets').set(auth()).send({ title: '   ' }).expect(422);
-        await api().post('/v1/tickets').set(auth()).send({}).expect(400);
-        await api().get('/v1/tickets/not-a-uuid').set(auth()).expect(400);
+    it('reads a ticket', async () => {
+        // Arrange
+        const id = await openTicket();
+
+        // Act
+        const res = await api().get(`/v1/tickets/${id}`).set(auth);
+
+        // Assert
+        expect(res.status).toBe(200);
+        expect(res.body).toMatchObject({
+            success: true,
+            data: { id, status: 'open', createdBy: 'alice' },
+        });
+    });
+
+    it('lists tickets by status', async () => {
+        // Arrange
+        const id = await openTicket();
+
+        // Act
+        const res = await api().get('/v1/tickets?status=open&size=10').set(auth);
+
+        // Assert
+        expect(res.status).toBe(200);
+        const listed = (res.body as { data: { data: { id: string }[] } }).data.data;
+        expect(listed.map((t) => t.id)).toEqual([id]);
+    });
+
+    it('closes a ticket', async () => {
+        // Arrange
+        const id = await openTicket();
+
+        // Act
+        const res = await api().post(`/v1/tickets/${id}/close`).set(auth);
+
+        // Assert
+        expect(res.status).toBe(200);
+        expect(res.body).toMatchObject({ success: true, data: { id, status: 'closed' } });
+    });
+
+    it('returns 409 when closing a closed ticket', async () => {
+        // Arrange
+        const id = await openTicket();
+        await api().post(`/v1/tickets/${id}/close`).set(auth).expect(200);
+
+        // Act
+        const res = await api().post(`/v1/tickets/${id}/close`).set(auth);
+
+        // Assert
+        expect(res.status).toBe(409);
+        expect(res.body).toMatchObject({ success: false });
+    });
+
+    it.each([
+        ['a blank title (domain validation)', 'post', '/v1/tickets', { title: '   ' }, 422],
+        ['a missing title (schema validation)', 'post', '/v1/tickets', {}, 400],
+        ['a malformed id', 'get', '/v1/tickets/not-a-uuid', undefined, 400],
+        [
+            'an unknown ticket',
+            'get',
+            '/v1/tickets/3f2c3c0e-8c1c-4a55-9a6f-2a0b8f7d9c11',
+            undefined,
+            404,
+        ],
+    ] as const)('returns the right status for %s', async (_case, method, path, body, status) => {
+        // Arrange
+        const call = method === 'post' ? api().post(path).send(body) : api().get(path);
+
+        // Act
+        const res = await call.set(auth);
+
+        // Assert
+        expect(res.status).toBe(status);
     });
 });
 ```

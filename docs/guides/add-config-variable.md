@@ -79,15 +79,29 @@ const maxPageSize = this.config.get<number>('tickets.maxPageSize')!;
 
 ```ts
 // test/unit/infrastructure/config/env-config.adapter.spec.ts
-it('loads the tickets section with defaults and overrides', () => {
-    expect(loadConfig().tickets).toEqual({ maxPageSize: 100, allowCloseByOthers: true });
+it('loads the tickets section with defaults', () => {
+    // Arrange: only BASE_ENV is set
 
+    // Act
+    const config = loadConfig();
+
+    // Assert
+    expect(config.tickets).toEqual({ maxPageSize: 100, allowCloseByOthers: true });
+});
+
+it('loads the tickets section overrides', () => {
+    // Arrange
     process.env = {
         ...BASE_ENV,
         TICKETS_MAX_PAGE_SIZE: '50',
         TICKETS_ALLOW_CLOSE_BY_OTHERS: 'false',
     };
-    expect(loadConfig().tickets).toEqual({ maxPageSize: 50, allowCloseByOthers: false });
+
+    // Act
+    const config = loadConfig();
+
+    // Assert
+    expect(config.tickets).toEqual({ maxPageSize: 50, allowCloseByOthers: false });
 });
 ```
 
