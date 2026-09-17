@@ -62,6 +62,22 @@ Adding a variable: [Add a config variable](../guides/add-config-variable.md).
 | `SCHEDULER_ENABLED`                                         | `false`                         | run the cron jobs in this instance ([Operations → Scheduled jobs](operations.md#scheduled-jobs))                                |
 | `SCHEDULER_TIMEZONE`                                        | `UTC`                           | IANA timezone the cron expressions are read in                                                                                  |
 
+### Outbound HTTP
+
+Defaults for every call a gateway makes ([Call another service](../guides/call-another-service.md)). A single request may override the timeout and the retry count.
+
+| Variable                                | Default    | Notes                                                                                      |
+| --------------------------------------- | ---------- | ------------------------------------------------------------------------------------------ |
+| `HTTP_CLIENT_TIMEOUT_MS`                | `5000`     | per attempt, so retries multiply it; keep it inside your own request deadline              |
+| `HTTP_CLIENT_RETRIES`                   | `2`        | extra attempts, only for methods that are safe to repeat or marked `idempotent`            |
+| `HTTP_CLIENT_RETRY_BASE_MS`             | `200`      | exponential: 200, 400, 800…                                                                |
+| `HTTP_CLIENT_RETRY_JITTER_MS`           | `150`      | keeps instances from retrying in lockstep                                                  |
+| `HTTP_CLIENT_RETRY_MAX_DELAY_MS`        | `5000`     | caps the backoff, and a `Retry-After` the upstream asks for                                |
+| `HTTP_CLIENT_CIRCUIT_ENABLED`           | `true`     | per upstream origin                                                                        |
+| `HTTP_CLIENT_CIRCUIT_FAILURE_THRESHOLD` | `5`        | consecutive failures (transport errors and 5xx) that open it                               |
+| `HTTP_CLIENT_CIRCUIT_RESET_MS`          | `30000`    | how long it stays open before one trial call is allowed                                    |
+| `HTTP_CLIENT_USER_AGENT`                | `APP_NAME` | the project name, renamed by `pnpm rename-project`; upstreams use it to tell callers apart |
+
 ### JWT
 
 | Variable                      | Default      | Notes                                    |

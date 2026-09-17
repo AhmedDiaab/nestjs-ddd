@@ -99,6 +99,9 @@ A repository is not "any class with SQL": a read-only list belongs in a DAO even
 | **Source / source key** | one configured database (`main`), defined in `DATABASE_CONFIG_JSON`, referenced through `DatabaseSources` |
 | **Pool**                | the driver's connection pool for a source; `PoolManager` owns one per source                              |
 | **ConnectionProvider**  | how adapters get a connection: `withConnection`, `transaction`, `runInTransaction`                        |
+| **HttpClient**          | infrastructure contract for one outbound call: timeout, retries, circuit breaker, correlation header      |
+| **Circuit breaker**     | stops calling an upstream that keeps failing, then lets one trial call through                            |
+| **Request context**     | the correlation id of the current request, carried through async calls (`RequestContextPort`)             |
 | **Context user**        | the acting username sent to Oracle as `CLIENT_IDENTIFIER` for one call, then cleared                      |
 | **Tag**                 | a label like `tickets.save` attached to a call for logs and errors, never the SQL text                    |
 | **Dialect**             | database type of a source (`oracle` implemented; others are placeholders)                                 |

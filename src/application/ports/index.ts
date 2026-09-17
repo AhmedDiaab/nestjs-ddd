@@ -12,6 +12,12 @@ export {
 
 export { type LoggerPort } from './logger.port';
 
+export {
+    type RequestContext,
+    type RequestContextPort,
+    RequestContextPortToken,
+} from './request-context.port';
+
 export { ConfigPortToken, LoggerPortToken } from './tokens';
 
 export {

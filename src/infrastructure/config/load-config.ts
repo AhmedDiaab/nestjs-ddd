@@ -2,6 +2,7 @@ import { env } from 'node:process';
 import {
     appSchema,
     databaseConfigSchema,
+    httpClientSchema,
     httpSchema,
     jwtSchema,
     loggingSchema,
@@ -15,6 +16,7 @@ const rootSchema = z.object({
     app: appSchema,
     logging: loggingSchema,
     http: httpSchema,
+    httpClient: httpClientSchema,
     // optional: services without a database leave DATABASE_CONFIG_JSON unset
     database: databaseConfigSchema.optional(),
     jwt: jwtSchema,
@@ -57,6 +59,17 @@ function hydrate() {
             trustProxy: envBool(env.TRUST_PROXY),
             csrfEnabled: envBool(env.CSRF_ENABLED),
             csrfTrustedOrigins: envList(env.CSRF_TRUSTED_ORIGINS),
+        },
+        httpClient: {
+            timeoutMs: envString(env.HTTP_CLIENT_TIMEOUT_MS),
+            retries: envString(env.HTTP_CLIENT_RETRIES),
+            retryBaseMs: envString(env.HTTP_CLIENT_RETRY_BASE_MS),
+            retryJitterMs: envString(env.HTTP_CLIENT_RETRY_JITTER_MS),
+            retryMaxDelayMs: envString(env.HTTP_CLIENT_RETRY_MAX_DELAY_MS),
+            circuitEnabled: envBool(env.HTTP_CLIENT_CIRCUIT_ENABLED),
+            circuitFailureThreshold: envString(env.HTTP_CLIENT_CIRCUIT_FAILURE_THRESHOLD),
+            circuitResetMs: envString(env.HTTP_CLIENT_CIRCUIT_RESET_MS),
+            userAgent: envString(env.HTTP_CLIENT_USER_AGENT),
         },
         database: databaseSources
             ? {

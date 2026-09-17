@@ -65,6 +65,7 @@ src/
 │   ├── decorators/         # @UseZodHttp, @Validated, @CurrentUser
 │   ├── errors/             # HTTP-only errors (CsrfRejectedError); business errors live in application/domain
 │   ├── guards/             # JwtGuard + RolesGuard (global), getAuthenticatedUser, readGuardInput, CsrfGuard
+│   ├── middleware/         # RequestContextMiddleware (correlation id for outbound calls)
 │   ├── interceptors/       # ZodHttpInterceptor
 │   ├── pipes/ schemas/ swagger/
 │   ├── error-presenter.ts  # problem kind → HTTP status

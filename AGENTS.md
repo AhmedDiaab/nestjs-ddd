@@ -65,6 +65,7 @@ Details: [`docs/architecture/overview.md`](docs/architecture/overview.md).
     - `outFormat: oracledb.OUT_FORMAT_OBJECT` + named columns; map rows in `infrastructure/database/mappers`, never in domain
     - writes inside `db.transaction(...)`; several aggregates atomically → `UnitOfWorkPort.run(...)` in the use case, never connections in use cases
     - pass `{ contextUser: options?.actor, tag: 'feature.method' }` on every call
+- **Outbound HTTP**: gateway adapters inject `HttpClientToken` (infrastructure contract; never from application or interface) and pass a `tag`. Statuses are returned, not thrown: map the expected ones to `Result`, throw `InfrastructureError` for the rest. `idempotent: true` only when the upstream deduplicates.
 - **Domain events**: aggregates `addEvent`; use cases `publish(aggregate.pullEvents())` via `DomainEventPublisherPortToken` **after** the save/unit of work commits; handlers implement `DomainEventHandler` in `src/application/events` and are listed in `ApplicationModule`.
 - **Actor**: controllers pass `user.username` → use case input `username` → port option `actor` → adapter `contextUser` (Oracle `CLIENT_IDENTIFIER`).
 - **Config**: new env vars go through a Zod schema + `envString`/`envBool`/`envList` in `load-config.ts`, `.env.example`, and `docs/architecture/configuration.md`. Read via `ConfigPortToken`.
@@ -90,6 +91,7 @@ Follow the matching guide; each has complete, compiled example code:
 | Use case                                                        | [`docs/guides/add-use-case.md`](docs/guides/add-use-case.md)                                                                                             |
 | Controller / endpoint                                           | [`docs/guides/add-controller.md`](docs/guides/add-controller.md)                                                                                         |
 | Authentication strategy / where auth applies                    | [`docs/guides/add-an-auth-strategy.md`](docs/guides/add-an-auth-strategy.md)                                                                             |
+| Call another service over HTTP                                  | [`docs/guides/call-another-service.md`](docs/guides/call-another-service.md)                                                                             |
 | Scheduled job (cron)                                            | [`docs/guides/add-a-scheduled-job.md`](docs/guides/add-a-scheduled-job.md)                                                                               |
 | Error → HTTP status                                             | [`docs/guides/add-error.md`](docs/guides/add-error.md)                                                                                                   |
 | Config variable                                                 | [`docs/guides/add-config-variable.md`](docs/guides/add-config-variable.md)                                                                               |

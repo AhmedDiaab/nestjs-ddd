@@ -5,7 +5,7 @@ import { ProviderFactory } from '@common/factories';
 import { ThrottlerStorageToken } from '@infrastructure/throttling';
 import { DatabaseInfoController, HealthController } from '@interface/http/controllers';
 import { CsrfGuard, JwtGuard, RolesGuard } from '@interface/http/guards';
-import { Module } from '@nestjs/common';
+import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule, type ThrottlerStorage } from '@nestjs/throttler';
 import { FallbackController } from './http/common/fallback/fallback.controller';
@@ -13,6 +13,7 @@ import { ResponseFormatterInterceptor } from './http/common/interceptors/respons
 import { ErrorPresenter } from './http/error-presenter';
 import { GlobalExceptionFilter } from './http/global-exception.filter';
 import { ZodHttpInterceptor } from './http/interceptors/zod-http.interceptor';
+import { RequestContextMiddleware } from './http/middleware';
 
 @Module({
     imports: [
@@ -45,4 +46,9 @@ import { ZodHttpInterceptor } from './http/interceptors/zod-http.interceptor';
     ],
     exports: [ErrorPresenter],
 })
-export class InterfaceModule {}
+export class InterfaceModule implements NestModule {
+    configure(consumer: MiddlewareConsumer): void {
+        // every route, including the fallback: a 404 is worth correlating too
+        consumer.apply(RequestContextMiddleware).forRoutes('*all');
+    }
+}

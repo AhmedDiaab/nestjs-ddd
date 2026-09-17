@@ -11,6 +11,8 @@ export {
     type OracleSourceConfig,
 } from './database.schema';
 
+export { type HttpClientConfig, httpClientSchema } from './http-client.schema';
+
 export { type HttpConfig, httpSchema } from './http.schema';
 
 export { type LoggingConfig, loggingSchema } from './logging.schema';

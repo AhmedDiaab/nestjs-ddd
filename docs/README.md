@@ -17,6 +17,7 @@ Start here. Each link is one focused document.
 | Add business logic                                                             | [Add a use case](guides/add-use-case.md)                                          |
 | Expose an HTTP endpoint                                                        | [Add a controller](guides/add-controller.md)                                      |
 | Add a way of authenticating, or change where auth applies                      | [Add an authentication strategy](guides/add-an-auth-strategy.md)                  |
+| Call another service over HTTP                                                 | [Call another service](guides/call-another-service.md)                            |
 | Run work on a schedule (cron)                                                  | [Add a scheduled job](guides/add-a-scheduled-job.md)                              |
 | Return a specific HTTP status for a failure                                    | [Add an error](guides/add-error.md)                                               |
 | Add an environment variable                                                    | [Add a config variable](guides/add-config-variable.md)                            |
