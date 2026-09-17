@@ -6,6 +6,8 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, …) wor
 
 NestJS 11 layered/DDD API template: TypeScript 5 (strict), Express 5, Zod 4, node-oracledb 6, nestjs-pino, Jest 30, pnpm 10, Node ≥ 22.18.
 
+Vocabulary used below (repository vs DAO vs gateway, read model, unit of work…): [`docs/glossary.md`](docs/glossary.md).
+
 ## Commands
 
 | Goal                                                    | Command                                                  |
