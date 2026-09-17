@@ -7,71 +7,55 @@ import type {
     ValueProvide,
 } from '@common/type-utils';
 import type { InjectionToken, OptionalFactoryDependency } from '@nestjs/common';
-import type { Constructor } from '@shared';
+import type { Constructor, TypedToken } from '@shared';
+
+type Inject = ReadonlyArray<InjectionToken | OptionalFactoryDependency>;
 
 /**
  * Factory of typed Nest providers.
  *
- * This helper offers strongly-typed shorthands for the common provider patterns:
  * - `class()`    → useClass (constructor)
  * - `factory()`  → useFactory (variadic, supports `inject`)
  * - `value()`    → useValue (constant/singleton)
  * - `existing()` → useExisting (alias another provider)
  *
- * Notes:
- * - `Token` is your DI token type (string/symbol/Type), `T` is the instance type.
- * - `inject` controls the parameters passed to your `useFactory` function.
+ * With a `TypedToken<T>` the bound class/factory/value must produce `T`
+ * (`NoInfer` makes the token, not the implementation, decide `T`):
+ *
+ * @example
+ * ProviderFactory.class(ConfigPortToken, EnvConfigAdapter)   // ok
+ * ProviderFactory.class(ConfigPortToken, PinoLoggerAdapter)  // compile error
+ *
+ * Plain string tokens (Nest's `APP_GUARD`, `APP_FILTER`...) are accepted unchecked.
  */
 export class ProviderFactory {
-    /**
-     * Create a `useClass` provider.
-     *
-     * @typeParam Token - The DI token type (string/symbol/Type).
-     * @typeParam T - The instance/class type produced by the provider.
-     *
-     * @param token - The DI token to bind.
-     * @param useClass - The concrete class/constructor to instantiate.
-     * @returns A typed `useClass` provider.
-     *
-     * @example
-     * ProviderFactory.class(SHIFT_READ_PORT, OracleShiftReadAdapter)
-     */
-    static class<Token extends DIToken, T>(
-        token: Token,
-        useClass: Constructor<T>,
-    ): ClassProvide<Token, T> {
+    static class<T>(
+        token: TypedToken<T>,
+        useClass: Constructor<NoInfer<T>>,
+    ): ClassProvide<TypedToken<T>, T>;
+    static class<T>(token: string, useClass: Constructor<T>): ClassProvide<string, T>;
+    static class<T>(token: DIToken, useClass: Constructor<T>): ClassProvide<DIToken, T> {
         return {
             provide: token,
             useClass,
         };
     }
 
-    /**
-     * Create a `useFactory` provider (supports DI via `inject`).
-     *
-     * The factory can be sync or async. The `inject` array determines the
-     * arguments passed to `useFactory` in order.
-     *
-     * @typeParam Token - The DI token type (string/symbol/Type).
-     * @typeParam T - The instance type produced by the factory.
-     *
-     * @param token - The DI token to bind.
-     * @param useFactory - Factory function (variadic). Receives values for each token in `inject`.
-     * @param inject - Tokens (and/or optional deps) to resolve and pass to the factory.
-     * @returns A typed `useFactory` provider.
-     *
-     * @example
-     * ProviderFactory.factory(
-     *   CONNECTION_PROVIDER,
-     *   async (cfg: ConfigPort, mgr: MultiDialectPoolManager) => { ... },
-     *   [ConfigPortToken, MultiDialectPoolManager],
-     * )
-     */
-    static factory<Token extends DIToken, T>(
-        token: Token,
+    static factory<T>(
+        token: TypedToken<T>,
+        useFactory: (...args: any[]) => NoInfer<T> | Promise<NoInfer<T>>,
+        inject?: Inject,
+    ): FactoryProvide<TypedToken<T>, T>;
+    static factory<T>(
+        token: string,
         useFactory: (...args: any[]) => T | Promise<T>,
-        inject: ReadonlyArray<InjectionToken | OptionalFactoryDependency> = [],
-    ): FactoryProvide<Token, T> {
+        inject?: Inject,
+    ): FactoryProvide<string, T>;
+    static factory<T>(
+        token: DIToken,
+        useFactory: (...args: any[]) => T | Promise<T>,
+        inject: Inject = [],
+    ): FactoryProvide<DIToken, T> {
         return {
             provide: token,
             useFactory,
@@ -80,45 +64,22 @@ export class ProviderFactory {
         };
     }
 
-    /**
-     * Create a `useValue` provider (constant).
-     *
-     * @typeParam Token - The DI token type (string/symbol/Type).
-     * @typeParam T - The instance/value type.
-     *
-     * @param token - The DI token to bind.
-     * @param value - The constant value to provide.
-     * @returns A typed `useValue` provider.
-     *
-     * @example
-     * ProviderFactory.value(APP_CONFIG_TOKEN, loadConfig())
-     */
-    static value<Token extends DIToken, T>(token: Token, value: T): ValueProvide<Token, T> {
+    static value<T>(token: TypedToken<T>, value: NoInfer<T>): ValueProvide<TypedToken<T>, T>;
+    static value<T>(token: string, value: T): ValueProvide<string, T>;
+    static value<T>(token: DIToken, value: T): ValueProvide<DIToken, T> {
         return {
             provide: token,
             useValue: value,
         };
     }
 
-    /**
-     * Create a `useExisting` provider (alias an existing provider).
-     *
-     * Useful for exposing one implementation under multiple tokens.
-     *
-     * @typeParam Token - The DI token type (string/symbol/Type).
-     * @typeParam T - The instance type (should match the existing provider’s type).
-     *
-     * @param token - The alias token to bind.
-     * @param existing - An existing token to re-expose.
-     * @returns A typed `useExisting` provider.
-     *
-     * @example
-     * ProviderFactory.existing(CACHE_PORT, REDIS_CACHE_ADAPTER_TOKEN)
-     */
-    static existing<Token extends DIToken, T>(
-        token: Token,
-        existing: DIToken,
-    ): ExistingProvide<Token, T> {
+    /** Alias an existing provider, e.g. expose one adapter under two port tokens. */
+    static existing<T>(
+        token: TypedToken<T>,
+        existing: TypedToken<NoInfer<T>>,
+    ): ExistingProvide<TypedToken<T>, T>;
+    static existing<T>(token: string, existing: DIToken): ExistingProvide<string, T>;
+    static existing<T>(token: DIToken, existing: DIToken): ExistingProvide<DIToken, T> {
         return {
             provide: token,
             // Casting to InjectionToken is safe for Nest consumption.
@@ -126,12 +87,6 @@ export class ProviderFactory {
         };
     }
 
-    /**
-     * Same as top-level `provideMany`, exposed for a fluent style.
-     *
-     * @param providers - One or more providers to bundle.
-     * @returns The providers array.
-     */
     static many(...providers: Provide<any, any>[]) {
         return providers;
     }

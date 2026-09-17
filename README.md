@@ -58,7 +58,7 @@ test/
 | `infrastructure` | `@application/ports`, `@domain`, `@common`, `@shared` | `@interface` |
 | `interface` | `@application`, `@domain`, `@shared`, infra **tokens/contracts** only | adapters' internals |
 
-- DI tokens live next to ports in `application/ports/tokens.ts`.
+- DI tokens live next to ports in `application/ports/tokens.ts`, created with `createToken<Port>()`. `ProviderFactory` rejects binding a class/factory/value that doesn't implement the token's port.
 - `AppModule` is the only place that imports all layer modules. `ApplicationModule` and `InterfaceModule` never import `InfrastructureModule` (infra modules are `@Global`).
 - Rules are enforced with `no-restricted-imports` in `eslint.config.mjs`; cycles with `pnpm check:circular`.
 
@@ -191,6 +191,7 @@ pnpm start:repl
 
 pnpm lint && pnpm lint:test
 pnpm check:circular
+pnpm typecheck       # tsc over src + test (jest only transpiles)
 pnpm test             # unit (test/unit)
 pnpm test:cov
 pnpm test:e2e         # boots AppModule without a database

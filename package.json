@@ -20,6 +20,7 @@
         "lint:test": "eslint \"test/**/*.ts\"",
         "lint:fix": "eslint . --fix",
         "check:circular": "madge src --circular --warning --no-spinner",
+        "typecheck": "tsc --noEmit -p tsconfig.json",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "format:check": "prettier --check \"**/*.{ts,js,json,md,html,css}\"",
         "test": "jest",

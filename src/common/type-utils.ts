@@ -6,7 +6,11 @@ import type {
     ValueProvider,
 } from '@nestjs/common';
 
-// A DI token is string or symobol used to inject by token
+/**
+ * Any value Nest accepts as a provider key (type only).
+ * - `TypedToken<T>` (from `@shared`): our port tokens, checked against the bound class/factory
+ * - plain `string`/`symbol`: Nest's own tokens (`APP_GUARD`, `APP_FILTER`...) and legacy keys
+ */
 export type DIToken = string | symbol;
 
 /**
@@ -20,7 +24,6 @@ export type Provide<Token extends DIToken, Instance> =
     | (ValueProvider<Instance> & { provide: Token })
     | (ExistingProvider<Instance> & { provide: Token });
 
-/** Narrow utility types if you need them elsewhere */
 export type ClassProvide<Token extends DIToken, Instance> = ClassProvider<Instance> & {
     provide: Token;
 };

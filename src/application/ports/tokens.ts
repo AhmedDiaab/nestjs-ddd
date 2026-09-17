@@ -1,9 +1,17 @@
+import { createToken } from '@shared';
+import type { ConfigPort } from './config.port';
+import type { LoggerPort } from './logger.port';
+import type { DatabaseInfoRepositoryPort } from './repositories';
+
 /**
- * DI tokens for application ports.
- * Tokens live next to the ports so application/interface layers never import infrastructure.
+ * DI tokens for application ports. Interfaces vanish at runtime, so Nest needs a value to
+ * inject by. Tokens live next to the ports so use cases never import infrastructure.
+ * Each token carries its port type: binding an adapter that doesn't implement it fails to compile.
  */
-export const ConfigPortToken = Symbol.for('ConfigPort');
+export const ConfigPortToken = createToken<ConfigPort>('ConfigPort');
 
-export const LoggerPortToken = Symbol.for('LoggerPort');
+export const LoggerPortToken = createToken<LoggerPort>('LoggerPort');
 
-export const DatabaseInfoRepositoryPortToken = Symbol.for('DatabaseInfoRepositoryPort');
+export const DatabaseInfoRepositoryPortToken = createToken<DatabaseInfoRepositoryPort>(
+    'DatabaseInfoRepositoryPort',
+);
