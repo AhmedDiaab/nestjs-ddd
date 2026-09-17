@@ -25,6 +25,7 @@ Start here. Each link is one focused document.
 | Run it in Docker (with a local Oracle)                                         | [Operations → Docker](architecture/operations.md#docker)                          |
 | Run it as a Windows service or wire a monitoring tool                          | [Operations](architecture/operations.md)                                          |
 | Work on this repo with an AI agent                                             | [`AGENTS.md`](../AGENTS.md) and [Agentic development](agentic-development.md)     |
+| Know what the template does **not** do before adopting it                      | [Known gaps and open items](known-gaps.md)                                        |
 
 ## Reference
 
@@ -45,6 +46,8 @@ Start here. Each link is one focused document.
 **[Glossary](glossary.md)**: the vocabulary (repository, DAO, query port, gateway, read model, unit of work…) and which one to pick.
 
 **Decisions** ([index](decisions/README.md)): why things are the way they are.
+
+**[Known gaps and open items](known-gaps.md)**: a dated, honest review of what is missing or weak, and what to fix first.
 
 **Guides** use one running example, a _Tickets_ feature (open, close, get, list). Its code was compiled and tested against this template; the full implementation is on the `example/tickets` branch.
 

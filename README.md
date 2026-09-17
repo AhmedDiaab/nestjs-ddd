@@ -56,6 +56,7 @@ docker compose --env-file .env.docker up --build
 - [Feature walkthrough](docs/guides/feature-walkthrough.md): build a feature end to end, with step-by-step guides
 - [Database](docs/architecture/database.md) · [Configuration](docs/architecture/configuration.md) · [HTTP interface](docs/architecture/http-interface.md) · [Testing](docs/architecture/testing.md) · [Operations](docs/architecture/operations.md)
 - [Migrate a legacy service](docs/guides/migrate-a-legacy-service.md) · [Work with a database you don't own](docs/guides/work-with-a-database-you-dont-own.md)
+- [Known gaps and open items](docs/known-gaps.md): what the template does not do, and what to fix first
 - [Decisions](docs/decisions/README.md): why things are the way they are
 - [Agentic development](docs/agentic-development.md) and [`AGENTS.md`](AGENTS.md): working with AI coding agents
 
