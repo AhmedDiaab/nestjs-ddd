@@ -1,4 +1,9 @@
-export { type ConfigPort } from './config.port';
+export {
+    type ConfigKey,
+    type ConfigPort,
+    type ConfigValue,
+    type ConfigValues,
+} from './config.port';
 
 export { type LoggerPort } from './logger.port';
 

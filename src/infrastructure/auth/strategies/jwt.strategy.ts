@@ -1,7 +1,6 @@
 import type { ConfigPort } from '@application/ports';
 import { ConfigPortToken } from '@application/ports';
 import type { JWTPayload } from '@domain/auth';
-import type { JWTConfig } from '@infrastructure/config/schemas';
 import { Inject, Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import type { Request } from 'express';
@@ -10,7 +9,7 @@ import { ExtractJwt, Strategy, type StrategyOptionsWithoutRequest } from 'passpo
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor(@Inject(ConfigPortToken) config: ConfigPort) {
-        const jwt = config.get<JWTConfig>('jwt')!;
+        const jwt = config.get('jwt');
         const options: StrategyOptionsWithoutRequest = {
             // cookie first, then "Authorization: Bearer"
             jwtFromRequest: ExtractJwt.fromExtractors([

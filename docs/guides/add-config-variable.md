@@ -57,6 +57,8 @@ function hydrate() {
 
 Always wrap with `envString`/`envBool`/`envList`. They turn blank values into `undefined`, so defaults apply. (A plain `env.X === 'true'` makes an unset flag `false`, silently skipping the default.)
 
+Adding the section to `rootSchema` is all it takes for typed access: `config.get('tickets.maxPageSize')` compiles and is a `number` (see [Configuration](../architecture/configuration.md)).
+
 ## 3. Document
 
 - `.env.example`: add the variables with a comment showing the default.
@@ -68,7 +70,7 @@ Always wrap with `envString`/`envBool`/`envList`. They turn blank values into `u
 ```ts
 constructor(@Inject(ConfigPortToken) private readonly config: ConfigPort) {}
 
-const maxPageSize = this.config.get<number>('tickets.maxPageSize')!;
+const maxPageSize = this.config.get('tickets.maxPageSize'); // number, typed from the schema
 ```
 
 - In a **use case**: inject `ConfigPortToken`. Config is a port, so this is allowed.

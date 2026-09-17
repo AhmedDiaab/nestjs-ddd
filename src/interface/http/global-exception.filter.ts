@@ -30,7 +30,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     private log(exception: unknown, status: number, req: Request, requestId: string): void {
         if (status < 400) return;
 
-        const showStack = !!this.config.get<boolean>('logging.showStackTraces');
+        const showStack = !!this.config.get('logging.showStackTraces');
         const error = exception instanceof Error ? exception : undefined;
         const cause = (error as { cause?: unknown } | undefined)?.cause;
         const message = `[${requestId}] ${req.method} ${req.originalUrl} -> ${status} - ${error?.message ?? String(exception)}`;
@@ -53,7 +53,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         const res = context.getResponse<Response>();
         const req = context.getRequest<Request>();
         // req.id is set by pino-http; errors raised before it (e.g. body parsing) fall back to the header
-        const headerName = this.config.get<string>('logging.requestIdHeader') ?? 'x-request-id';
+        const headerName = this.config.get('logging.requestIdHeader') ?? 'x-request-id';
         const headerId = req.headers?.[headerName];
         const requestId =
             typeof req.id === 'string' ? req.id : typeof headerId === 'string' ? headerId : 'no-id';

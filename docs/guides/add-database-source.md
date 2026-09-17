@@ -54,4 +54,4 @@ Keep source selection inside the adapter. Ports and use cases never know which d
 
 ## Cross-database access via DB link
 
-If the second database is reachable through a DB link from `main`, you may not need a second pool. `DATABASE_USE_DBLINK` is available as a flag (`config.get<boolean>('database.useDbLink')`) for adapters that switch table names to `table@link`. Build those names from constants only.
+If the second database is reachable through a DB link from `main`, you may not need a second pool. `DATABASE_USE_DBLINK` is available as a flag (`config.get('database.useDbLink')`) for adapters that switch table names to `table@link`. Build those names from constants only.

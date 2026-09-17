@@ -18,9 +18,9 @@ import { ZodHttpInterceptor } from './http/interceptors/zod-http.interceptor';
         ThrottlerModule.forRootAsync({
             inject: [ConfigPortToken],
             useFactory: (config: ConfigPort) => {
-                const limit = config.get<number>('http.throttleLimit') ?? 100;
+                const limit = config.get('http.throttleLimit') ?? 100;
                 return {
-                    throttlers: [{ ttl: config.get<number>('http.throttleTtlMs') ?? 60000, limit }],
+                    throttlers: [{ ttl: config.get('http.throttleTtlMs') ?? 60000, limit }],
                     skipIf: () => limit === 0,
                 };
             },

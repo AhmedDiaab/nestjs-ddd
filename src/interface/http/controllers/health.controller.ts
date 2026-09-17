@@ -30,7 +30,7 @@ export class HealthController {
     /** Readiness: every implemented database source answers a ping. */
     @Get('ready')
     async ready() {
-        const timeoutMs = this.config.get<number>('database.health.timeoutMs') ?? 3000;
+        const timeoutMs = this.config.get('database.health.timeoutMs') ?? 3000;
         const hideErrors = this.config.isProduction();
 
         const sources = (await this.db.health(timeoutMs)).map((source) => ({

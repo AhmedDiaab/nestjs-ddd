@@ -9,16 +9,16 @@ import type { TransportTargetOptions } from 'pino';
 import type { Options as PinoHttpOptions } from 'pino-http';
 
 function fileRotationTarget(config: ConfigPort): TransportTargetOptions | undefined {
-    if (!config.get<boolean>('logging.toFile')) return undefined;
+    if (!config.get('logging.toFile')) return undefined;
 
-    const logDirectory = config.get<string>('logging.directory')!;
-    const logFileName = config.get<string>('logging.fileName')!;
-    const logFilesLimit = config.get<number>('logging.filesLimit')!;
-    const maxSize = config.get<string>('logging.maxSize');
+    const logDirectory = config.get('logging.directory');
+    const logFileName = config.get('logging.fileName');
+    const logFilesLimit = config.get('logging.filesLimit');
+    const maxSize = config.get('logging.maxSize');
 
     return {
         target: 'pino-roll',
-        level: config.get<string>('logging.logLevel'),
+        level: config.get('logging.logLevel'),
         options: {
             file: join(logDirectory, logFileName),
             frequency: 'daily',
@@ -42,18 +42,18 @@ function isResolvable(moduleName: string): boolean {
 }
 
 function consoleTarget(config: ConfigPort): TransportTargetOptions {
-    const pretty = config.get<boolean>('logging.pretty') ?? config.isDevelopment();
+    const pretty = config.get('logging.pretty') ?? config.isDevelopment();
     // pino-pretty is a devDependency: fall back to JSON stdout when it is not installed
     if (pretty && isResolvable('pino-pretty')) {
         return {
             target: 'pino-pretty',
-            level: config.get<string>('logging.logLevel'),
+            level: config.get('logging.logLevel'),
             options: { singleLine: true, colorize: true },
         };
     }
     return {
         target: 'pino/file',
-        level: config.get<string>('logging.logLevel'),
+        level: config.get('logging.logLevel'),
         options: { destination: 1 }, // stdout
     };
 }
@@ -63,14 +63,14 @@ export function isHealthCheck(url: string | undefined): boolean {
 }
 
 export const generatePinoOptions = (config: ConfigPort): Params => {
-    const requestIdHeader = config.get<string>('logging.requestIdHeader')!;
+    const requestIdHeader = config.get('logging.requestIdHeader');
     const targets = [fileRotationTarget(config), consoleTarget(config)].filter(
         (target): target is TransportTargetOptions => !!target,
     );
 
     return {
         pinoHttp: {
-            level: config.get<string>('logging.logLevel'),
+            level: config.get('logging.logLevel'),
             autoLogging: true,
             transport: { targets },
             genReqId: (req: IncomingMessage) => {
@@ -101,7 +101,7 @@ export const generatePinoOptions = (config: ConfigPort): Params => {
                 }),
             },
             customProps: (req: IncomingMessage) => ({
-                env: config.get<string>('app.env'),
+                env: config.get('app.env'),
                 requestId: req.id,
             }),
             customAttributeKeys: { responseTime: 'latencyMs' },

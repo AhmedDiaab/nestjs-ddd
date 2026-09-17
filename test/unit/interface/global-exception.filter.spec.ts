@@ -7,15 +7,13 @@ import type { ArgumentsHost } from '@nestjs/common';
 
 jest.mock('dotenv-flow/config', () => undefined);
 
-const createConfigStub = (showStackTraces: boolean): ConfigPort => ({
-    get: <T>(key: string) => {
-        if (key === 'logging.showStackTraces') return showStackTraces as T;
-        return undefined;
-    },
-    all: () => ({}),
-    isDevelopment: () => false,
-    isProduction: () => false,
-});
+const createConfigStub = (showStackTraces: boolean): ConfigPort =>
+    ({
+        get: (key: string) => (key === 'logging.showStackTraces' ? showStackTraces : undefined),
+        all: () => ({}),
+        isDevelopment: () => false,
+        isProduction: () => false,
+    }) as unknown as ConfigPort;
 
 const createLoggerStub = () => {
     const debugMock = jest.fn<ReturnType<LoggerPort['debug']>, Parameters<LoggerPort['debug']>>();

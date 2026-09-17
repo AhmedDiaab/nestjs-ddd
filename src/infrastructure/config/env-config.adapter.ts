@@ -1,5 +1,5 @@
 import { env } from 'node:process';
-import type { ConfigPort } from '@application/ports';
+import type { ConfigKey, ConfigPort, ConfigValue, ConfigValues } from '@application/ports';
 import {
     appSchema,
     databaseConfigSchema,
@@ -137,20 +137,19 @@ export class EnvConfigAdapter implements ConfigPort {
         return this.config.app.env === 'production';
     }
 
-    // dot-path access: e.g., get<number>('http.port')
-    get<T = unknown>(key: string): T | undefined {
-        const parts = key.split('.');
+    /** Dot-path access, typed by `ConfigValues` (see `config-values.ts`): `get('http.port')`. */
+    get<K extends ConfigKey>(key: K): ConfigValue<K> {
         let current: unknown = this.config;
 
-        for (const part of parts) {
-            if (!isRecord(current)) return undefined;
+        for (const part of key.split('.')) {
+            if (!isRecord(current)) return undefined as ConfigValue<K>;
             current = current[part];
-            if (current === undefined) return undefined;
+            if (current === undefined) return undefined as ConfigValue<K>;
         }
-        return current as T;
+        return current as ConfigValue<K>;
     }
 
-    all(): Record<string, unknown> {
+    all(): ConfigValues {
         return structuredClone(this.config);
     }
 }

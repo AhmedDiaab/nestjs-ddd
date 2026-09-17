@@ -195,7 +195,7 @@ Don't import infrastructure modules here; ports are provided by global infrastru
 | Keep rules in the domain; orchestrate here                                      | Re-implement validation that a value object owns                                     |
 | Call another use case's logic through ports or a domain service                 | Inject use cases into use cases (hidden coupling; if unavoidable, keep it one level) |
 
-Configuration in a use case: inject `ConfigPortToken`, read `config.get<number>('tickets.maxPageSize')`.
+Configuration in a use case: inject `ConfigPortToken`, read `config.get('tickets.maxPageSize')` (typed from the schema).
 
 Logging: inject `LoggerPortToken`; log business events at `info` and rejected rules at `warn` only when useful. HTTP failures are already logged by the filter.
 

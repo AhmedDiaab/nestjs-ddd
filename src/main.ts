@@ -27,26 +27,26 @@ async function bootstrap() {
     // get config service
     const config = app.get<ConfigPort>(ConfigPortToken);
 
-    if (config.get<boolean>('http.trustProxy')) app.set('trust proxy', 1);
+    if (config.get('http.trustProxy')) app.set('trust proxy', 1);
 
     app.use(helmet());
     app.use(cookieParser());
 
     // server timeouts
     const server: HttpServer = app.getHttpServer();
-    server.setTimeout(config.get<number>('http.serverTimeout'));
-    server.headersTimeout = config.get<number>('http.headersTimeout')!;
-    server.keepAliveTimeout = config.get<number>('http.keepAliveTimeout')!;
+    server.setTimeout(config.get('http.serverTimeout'));
+    server.headersTimeout = config.get('http.headersTimeout')!;
+    server.keepAliveTimeout = config.get('http.keepAliveTimeout')!;
 
     // body parsers with limits from config (Nest wraps express' parsers; no direct express import)
-    app.useBodyParser('json', { limit: config.get<string>('http.jsonBodyLimit') });
+    app.useBodyParser('json', { limit: config.get('http.jsonBodyLimit') });
     app.useBodyParser('urlencoded', {
         extended: true,
-        limit: config.get<string>('http.urlencodedBodyLimit'),
+        limit: config.get('http.urlencodedBodyLimit'),
     });
 
     // CORS: explicit allow-list only. With cookie auth, never reflect arbitrary origins.
-    const corsOrigins = config.get<string[]>('http.corsOrigins') ?? [];
+    const corsOrigins = config.get('http.corsOrigins') ?? [];
     app.enableCors({
         origin: corsOrigins.length ? corsOrigins : false,
         credentials: true,
@@ -60,8 +60,8 @@ async function bootstrap() {
 
     const swaggerPath = setupSwagger(app, config);
 
-    const port = config.get<number>('http.port')!;
-    const env = config.get<string>('app.env')!;
+    const port = config.get('http.port');
+    const env = config.get('app.env');
     await app.listen(port);
 
     logger.log(
