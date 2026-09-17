@@ -39,7 +39,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; case \"$f\" in *.ts|*.md|*.json) cd \"$CLAUDE_PROJECT_DIR\" && pnpm exec prettier --write --log-level error \"$f\" ;; esac; } 2>/dev/null || true",
+                        "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; case \"$f\" in \"$CLAUDE_PROJECT_DIR\"/*.ts|\"$CLAUDE_PROJECT_DIR\"/*.md|\"$CLAUDE_PROJECT_DIR\"/*.json) cd \"$CLAUDE_PROJECT_DIR\" && pnpm exec prettier --write --log-level error \"$f\" ;; esac; } 2>/dev/null || true",
                         "timeout": 30,
                         "statusMessage": "Formatting with prettier"
                     }
