@@ -1,9 +1,32 @@
 {
-  "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": ".",
-  "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
-  "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
-  }
+    "moduleFileExtensions": [
+        "js",
+        "json",
+        "ts"
+    ],
+    "rootDir": "..",
+    "testEnvironment": "node",
+    "testMatch": [
+        "<rootDir>/test/e2e/**/*.e2e-spec.ts"
+    ],
+    "transform": {
+        "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "moduleNameMapper": {
+        "^@application$": "<rootDir>/src/application/index",
+        "^@application/(.*)$": "<rootDir>/src/application/$1",
+        "^@infrastructure$": "<rootDir>/src/infrastructure/index",
+        "^@infrastructure/(.*)$": "<rootDir>/src/infrastructure/$1",
+        "^@domain$": "<rootDir>/src/domain/index",
+        "^@domain/(.*)$": "<rootDir>/src/domain/$1",
+        "^@interface$": "<rootDir>/src/interface/index",
+        "^@interface/(.*)$": "<rootDir>/src/interface/$1",
+        "^@common$": "<rootDir>/src/common/index",
+        "^@common/(.*)$": "<rootDir>/src/common/$1",
+        "^@shared$": "<rootDir>/src/shared/index",
+        "^@shared/(.*)$": "<rootDir>/src/shared/$1",
+        "^@src$": "<rootDir>/src",
+        "^@src/(.*)$": "<rootDir>/src/$1",
+        "^@mocks/(.*)$": "<rootDir>/test/mocks/$1"
+    }
 }

@@ -1,0 +1,17 @@
+{
+    "baseDir": "src",
+    "fileExtensions": [
+        "ts"
+    ],
+    "tsConfig": "./tsconfig.path.json",
+    "detectiveOptions": {
+        "ts": {
+            "skipTypeImports": false
+        }
+    },
+    "excludeRegExp": [
+        "node_modules",
+        "dist",
+        "\\.(spec|test)\\.ts$"
+    ]
+}

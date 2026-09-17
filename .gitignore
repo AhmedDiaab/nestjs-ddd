@@ -35,13 +35,9 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# dotenv environment variable files
-!.env.example
+# dotenv environment variable files (negation must come after the pattern it overrides)
 .env*
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
+!.env.example
 
 # temp directory
 .temp
