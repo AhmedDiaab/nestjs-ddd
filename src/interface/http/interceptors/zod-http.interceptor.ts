@@ -1,84 +1,50 @@
-import type { IncomingHttpHeaders } from 'node:http';
 import {
     BadRequestException,
-    CallHandler,
-    ExecutionContext,
     Injectable,
-    NestInterceptor,
+    type CallHandler,
+    type ExecutionContext,
+    type NestInterceptor,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import type { Request as ExpressRequest } from 'express';
-import { ZodError, ZodType } from 'zod';
-import { ZOD_HTTP_SCHEMA, ZodHttpSchema } from '../decorators/zod-http.decorator';
+import type { Request } from 'express';
+import type { ZodError, ZodType } from 'zod';
+import { ZOD_HTTP_SCHEMA, type ZodHttpSchema } from '../decorators/zod-http.decorator';
 
 type Part = 'body' | 'query' | 'params' | 'headers';
-
-// IMPORTANT: replace, don't intersect — so we can assign validated values back.
-type ValidatedRequest = Omit<ExpressRequest, 'body' | 'query' | 'params' | 'headers'> & {
-    body: unknown;
-    query: unknown;
-    params: unknown;
-    headers: IncomingHttpHeaders;
-};
 
 @Injectable()
 export class ZodHttpInterceptor implements NestInterceptor {
     constructor(private readonly reflector: Reflector) {}
 
-    private getPart(req: ValidatedRequest, part: Part): unknown {
-        switch (part) {
-            case 'body':
-                return req.body;
-            case 'query':
-                return req.query;
-            case 'params':
-                return req.params;
-            case 'headers':
-                return req.headers;
-        }
-    }
-
-    private setPart(req: ValidatedRequest, part: Part, value: unknown): void {
-        switch (part) {
-            case 'body':
-                req.body = value;
-                break;
-            case 'query':
-                req.query = value;
-                break;
-            case 'params':
-                req.params = value;
-                break;
-            case 'headers':
-                req.headers = value as IncomingHttpHeaders;
-                break;
-        }
+    /**
+     * Every validated part is stored on `req.validated[part]` (read it with `@Validated('query')`).
+     * `body` and `params` are also replaced in place. `query` is not: Express 5 exposes it as a
+     * getter, so assigning it throws. `headers` is not replaced either, so unlisted headers survive.
+     */
+    private store(req: Request, part: Part, value: unknown): void {
+        req.validated = { ...req.validated, [part]: value };
+        if (part === 'body') req.body = value;
+        if (part === 'params') req.params = value as Request['params'];
     }
 
     async intercept(context: ExecutionContext, next: CallHandler) {
-        const handler = context.getHandler();
-        const cls = context.getClass();
-
-        const schema = this.reflector.getAllAndOverride<ZodHttpSchema>(ZOD_HTTP_SCHEMA, [
-            handler,
-            cls,
-        ]);
+        const schema = this.reflector.getAllAndOverride<ZodHttpSchema | undefined>(
+            ZOD_HTTP_SCHEMA,
+            [context.getHandler(), context.getClass()],
+        );
 
         if (!schema) return next.handle();
 
-        const http = context.switchToHttp();
-        const req = http.getRequest<ValidatedRequest>();
-
+        const req = context.switchToHttp().getRequest<Request>();
         const useAsync = !!schema.async;
 
-        const validate = async (part: Part, zod?: ZodType) => {
-            if (!zod) return;
-            const source: unknown = this.getPart(req, part);
+        const validate = async (part: Part, zod: ZodType) => {
+            const source: unknown = req[part];
             const parsed = useAsync ? await zod.safeParseAsync(source) : zod.safeParse(source);
             if (!parsed.success) {
                 throw new BadRequestException(formatZodError(parsed.error, part));
             }
-            this.setPart(req, part, parsed.data);
+            this.store(req, part, parsed.data);
         };
 
         const parts: ReadonlyArray<[Part, ZodType | undefined]> = [
@@ -97,10 +63,10 @@ export class ZodHttpInterceptor implements NestInterceptor {
     }
 }
 
-function formatZodError(error: ZodError, part: string) {
+export function formatZodError(error: ZodError, part?: string) {
     const details = error.issues.map((i) => {
-        const path = i.path.length ? `${part}.${i.path.join('.')}` : part;
-        return `${path}: ${i.message}`;
+        const path = [part, ...i.path.map(String)].filter(Boolean).join('.');
+        return path ? `${path}: ${i.message}` : i.message;
     });
     return { message: 'Validation failed', details };
 }

@@ -1,25 +1,21 @@
-import type { ConfigPort } from '@application/ports/config.port';
-import type { LoggerPort } from '@application/ports/logger.port';
-import { formatStackTrace } from '@common/utils/format-stack-trace.util';
-import { ConfigPortToken } from '@infrastructure/config/config.token';
-import { LoggerPortToken } from '@infrastructure/logging/logging.token';
+import type { ConfigPort, LoggerPort } from '@application/ports';
+import { ConfigPortToken, LoggerPortToken } from '@application/ports';
+import { formatStackTrace } from '@common/utils';
 import {
-    ArgumentsHost,
     Catch,
-    ExceptionFilter,
     HttpException,
     HttpStatus,
     Inject,
     Injectable,
-    Scope,
+    type ArgumentsHost,
+    type ExceptionFilter,
 } from '@nestjs/common';
-import { isEnvelope, isRecord } from '@shared/helpers';
-import { Meta } from '@shared/response-envelope';
+import { isEnvelope, isRecord, type Meta } from '@shared';
 import type { Request, Response } from 'express';
 import { ErrorPresenter } from './error-presenter';
 
 @Catch()
-@Injectable({ scope: Scope.REQUEST })
+@Injectable()
 export class GlobalExceptionFilter implements ExceptionFilter {
     constructor(
         private readonly errorPresenter: ErrorPresenter,
@@ -27,43 +23,51 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         @Inject(LoggerPortToken) private readonly logger: LoggerPort,
     ) {}
 
-    private showErrorStack(exception: HttpException | Error) {
-        if (!this.config.get('logging.showStackTraces')) return;
-        return {
-            stack: exception.stack,
-            message: exception.message,
-            printableMessageWithTrace: `- ${exception.message} - \n ${formatStackTrace(exception.stack)}`,
+    /**
+     * 5xx are always logged (with the cause chain); 4xx only as warn.
+     * Stack traces are included only when SHOW_STACK_TRACES=true.
+     */
+    private log(exception: unknown, status: number, req: Request, requestId: string): void {
+        if (status < 400) return;
+
+        const showStack = !!this.config.get<boolean>('logging.showStackTraces');
+        const error = exception instanceof Error ? exception : undefined;
+        const cause = (error as { cause?: unknown } | undefined)?.cause;
+        const message = `[${requestId}] ${req.method} ${req.originalUrl} -> ${status} - ${error?.message ?? String(exception)}`;
+
+        const meta = {
+            correlationId: requestId,
+            http: { method: req.method, url: req.originalUrl, status },
+            errorName: error?.name,
+            cause:
+                cause instanceof Error ? { name: cause.name, message: cause.message } : undefined,
+            stack: showStack ? formatStackTrace(error?.stack) : undefined,
         };
+
+        if (status >= 500) this.logger.error(message, meta);
+        else this.logger.warn(message, meta);
     }
 
     catch(exception: unknown, host: ArgumentsHost) {
         const context = host.switchToHttp();
         const res = context.getResponse<Response>();
-        const req = context.getRequest<Request & { id: string }>();
-        const requestIdHeader = this.config.get<string>('logging.requestIdHeader')!;
-        const requestId = req.header(requestIdHeader) ?? 'no-id';
+        const req = context.getRequest<Request>();
+        // req.id is set by pino-http; errors raised before it (e.g. body parsing) fall back to the header
+        const headerName = this.config.get<string>('logging.requestIdHeader') ?? 'x-request-id';
+        const headerId = req.headers?.[headerName];
+        const requestId =
+            typeof req.id === 'string' ? req.id : typeof headerId === 'string' ? headerId : 'no-id';
 
         const meta: Meta = {
             timestamp: new Date().toISOString(),
-            path: req.url,
+            path: req.originalUrl || req.url,
             requestId,
         };
 
         if (exception instanceof HttpException) {
             const status = exception.getStatus();
             const rawResponse = exception.getResponse();
-            if (this.config.get('logging.showStackTraces')) {
-                if (status >= 500)
-                    this.logger.error(
-                        `[${requestId}] ${req.method} ${req.url} -> ${status} ${this.showErrorStack(exception)?.printableMessageWithTrace}`,
-                        {},
-                    );
-                else if (status >= 400)
-                    this.logger.warn(
-                        `[${requestId}] ${req.method} ${req.url} -> ${status} ${this.showErrorStack(exception)?.printableMessageWithTrace}`,
-                        {},
-                    );
-            }
+            this.log(exception, status, req, requestId);
 
             if (isEnvelope(rawResponse)) {
                 res.status(status).json({ ...rawResponse, meta: { ...meta, ...rawResponse.meta } });
@@ -88,51 +92,50 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             });
         }
 
-        const { status, body: errorBody } = this.errorPresenter.present(exception, requestId);
-
-        if (isEnvelope(errorBody)) {
-            res.status(status).json({ ...errorBody, meta: { ...meta, ...errorBody.meta } });
-            return;
+        // body-parser / http-errors (payload too large, malformed JSON): client errors, not 500
+        const clientError = asExposedClientError(exception);
+        if (clientError) {
+            this.log(exception, clientError.status, req, requestId);
+            return res.status(clientError.status).json({
+                success: false,
+                error: { message: clientError.message, code: clientError.type },
+                meta,
+            });
         }
 
-        const record: Record<string, unknown> = isRecord(errorBody) ? errorBody : {};
-        const rawMessage = record['message'] ?? record['detail'] ?? record['title'];
-        const message = Array.isArray(rawMessage)
-            ? rawMessage.join('; ')
-            : typeof rawMessage === 'string'
-              ? rawMessage
-              : undefined;
-
-        const rawCode = record['code'];
-        const code = typeof rawCode === 'string' ? rawCode : undefined;
-
-        // prefer explicit 'details', otherwise include domain/app validation 'errors'
-        const details = record['details'] ?? record['errors'];
-
-        if (this.config.get('logging.showStackTraces')) {
-            if (status >= 500) {
-                this.logger.error(
-                    `[${requestId}] ${req.method} ${req.url} -> ${status} ${this.showErrorStack(exception as Error)?.printableMessageWithTrace}`,
-                    {},
-                );
-                // this.config.get()
-            } else if (status >= 400) {
-                this.logger.warn(
-                    `[${requestId}] ${req.method} ${req.url} -> ${status} ${this.showErrorStack(exception as Error)?.printableMessageWithTrace}`,
-                    {},
-                );
-            }
-        }
+        const { status, body: problem } = this.errorPresenter.present(exception, requestId);
+        this.log(exception, status, req, requestId);
 
         return res.status(status).json({
             success: false,
             error: {
-                message: message ?? HttpStatus[status] ?? 'Error',
-                code,
-                details,
-                type: record.type,
+                message: problem.detail ?? problem.title ?? HttpStatus[status] ?? 'Error',
+                code: problem.code,
+                // domain/app validation field errors only; never internal `details`
+                details: problem.errors,
+                type: problem.type,
             },
             meta,
         });
     }
+}
+
+/** `http-errors` shape used by express middleware: `expose` is true only for safe 4xx messages. */
+function asExposedClientError(
+    exception: unknown,
+): { status: number; message: string; type?: string } | undefined {
+    if (!isRecord(exception) && !(exception instanceof Error)) return undefined;
+    const e = exception as {
+        status?: unknown;
+        expose?: unknown;
+        message?: unknown;
+        type?: unknown;
+    };
+    if (e.expose !== true || typeof e.status !== 'number') return undefined;
+    if (e.status < 400 || e.status >= 500) return undefined;
+    return {
+        status: e.status,
+        message: typeof e.message === 'string' ? e.message : (HttpStatus[e.status] ?? 'Error'),
+        type: typeof e.type === 'string' ? e.type : undefined,
+    };
 }

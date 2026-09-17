@@ -1,6 +1,6 @@
-// interface/http/pipes/zod-validation.pipe.ts
-import { BadRequestException, Injectable, PipeTransform } from '@nestjs/common';
-import { ZodError, ZodType } from 'zod';
+import { BadRequestException, Injectable, type PipeTransform } from '@nestjs/common';
+import type { ZodType } from 'zod';
+import { formatZodError } from '../interceptors/zod-http.interceptor';
 
 type Options = { async?: boolean };
 
@@ -21,12 +21,4 @@ export class ZodValidationPipe implements PipeTransform {
         }
         return parsed.data;
     }
-}
-
-function formatZodError(error: ZodError) {
-    const details = error.issues.map((i) => {
-        const path = i.path.join('.');
-        return path ? `${path}: ${i.message}` : i.message;
-    });
-    return { message: 'Validation failed', details };
 }

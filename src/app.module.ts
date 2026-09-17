@@ -1,11 +1,17 @@
-import { InfrastructureModule } from '@infrastructure/infrastructure.module';
+import { ApplicationModule } from '@application';
+import { InfrastructureModule } from '@infrastructure';
+import { InterfaceModule } from '@interface';
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { InterfaceModule } from './interface/interface.module';
 
+/**
+ * Composition root: the only place where layers are wired together.
+ * Infrastructure provides port implementations (global), application provides use cases,
+ * interface exposes them. Layers never import each other's Nest modules.
+ */
 @Module({
-    imports: [InfrastructureModule, InterfaceModule],
+    imports: [InfrastructureModule, ApplicationModule, InterfaceModule],
     controllers: [AppController],
     providers: [AppService],
 })

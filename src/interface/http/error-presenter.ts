@@ -1,7 +1,7 @@
-import { AppError } from '@application/errors/app-error';
-import { DomainError } from '@domain/errors/domain-error';
+import type { AppError } from '@application/errors';
+import type { DomainError } from '@domain/errors';
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { isPresentableError, ProblemKind, ProblemLike, ProblemTypes } from '@shared/problem';
+import { isProblemLike, ProblemTypes, type ProblemKind, type ProblemLike } from '@shared';
 
 const KIND_TO_STATUS: Record<ProblemKind, number> = {
     validation: HttpStatus.UNPROCESSABLE_ENTITY, // 422
@@ -12,16 +12,30 @@ const KIND_TO_STATUS: Record<ProblemKind, number> = {
     service_unavailable: HttpStatus.SERVICE_UNAVAILABLE, // 503
     bad_request: HttpStatus.BAD_REQUEST, // 400
     internal: HttpStatus.INTERNAL_SERVER_ERROR, // 500
+    not_implemented: HttpStatus.NOT_IMPLEMENTED, // 501
 };
+
+export type PresentedError = {
+    status: number;
+    body: ProblemLike & { status: number; traceId?: string };
+};
+
+function toProblemOnce(error: unknown): ProblemLike | undefined {
+    const fn = (error as { toProblem?: unknown } | null)?.toProblem;
+    if (typeof fn !== 'function') return undefined;
+    try {
+        const problem: unknown = fn.call(error);
+        return isProblemLike(problem) ? problem : undefined;
+    } catch {
+        return undefined;
+    }
+}
 
 @Injectable()
 export class ErrorPresenter {
-    present(
-        error: unknown,
-        traceId?: string,
-    ): { status: number; body: ProblemLike & { status: number; traceId?: string } } {
-        if (isPresentableError(error)) {
-            const problem: ProblemLike = error.toProblem();
+    present(error: unknown, traceId?: string): PresentedError {
+        const problem = toProblemOnce(error);
+        if (problem) {
             const status = KIND_TO_STATUS[problem.kind] ?? HttpStatus.INTERNAL_SERVER_ERROR;
             return { status, body: { ...problem, status, traceId } };
         }
@@ -50,7 +64,7 @@ export class ErrorPresenter {
                     kind: 'internal',
                     type: ProblemTypes.Internal,
                     title: 'Application Error',
-                    detail: (error as AppError).message ?? 'Application failure',
+                    detail: 'Application failure',
                     status,
                     traceId,
                 },
