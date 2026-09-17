@@ -52,6 +52,8 @@ function hydrate() {
             swaggerEnabled: envBool(env.SWAGGER_ENABLED),
             throttleTtlMs: envString(env.THROTTLE_TTL_MS),
             throttleLimit: envString(env.THROTTLE_LIMIT),
+            throttleStorage: envString(env.THROTTLE_STORAGE),
+            throttleRedisUrl: envString(env.THROTTLE_REDIS_URL),
             trustProxy: envBool(env.TRUST_PROXY),
             csrfEnabled: envBool(env.CSRF_ENABLED),
             csrfTrustedOrigins: envList(env.CSRF_TRUSTED_ORIGINS),
