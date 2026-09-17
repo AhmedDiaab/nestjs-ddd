@@ -76,7 +76,7 @@ The client receives `detail` as `error.message`, never `details` (those are for 
 
 ## Contracts
 
-`contracts/paginated-repository.ts` has generic offset/cursor repository shapes. `shared/pagination` has `PageEnvelope<T>` (`{ data, meta: { hasNext, hasPrev }, links }`) and cursor helpers.
+Paging has one set of types, in `shared/pagination`: `OffsetRequest<Sort>` and `CursorRequest<Sort>` (requests; `Sort` is the port's whitelist of sort keys), `PageEnvelope<T>` (`{ data, meta: { hasNext, hasPrev }, links }`) and cursor helpers. `contracts/paginated-repository.ts` has generic offset/cursor port shapes built on them. HTTP query schemas (`OffsetQuerySchema`, `CursorQuerySchema`) validate and cap `size` before it reaches a use case.
 
 ## Related
 

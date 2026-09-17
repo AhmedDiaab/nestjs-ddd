@@ -13,7 +13,7 @@ For reads shaped for responses (details, lists, reports, stored-procedure output
 ```ts
 // src/application/ports/queries/ticket.query.port.ts
 import { createToken } from '@shared';
-import type { PageEnvelope } from '@shared/pagination';
+import type { OffsetRequest, PageEnvelope } from '@shared/pagination';
 import type { QueryOptions } from './query-options';
 
 /** Read model: shaped for API responses, not a domain entity. */
@@ -32,17 +32,11 @@ export type TicketListFilter = {
 
 export type TicketSort = 'createdAt:desc' | 'createdAt:asc' | 'title:asc' | 'title:desc';
 
-export type PageRequest<Sort extends string> = {
-    page: number; // 1-based
-    size: number;
-    orderBy: Sort;
-};
-
 export interface TicketQueryPort {
     findById(id: string, options?: QueryOptions): Promise<TicketSummary | undefined>;
     list(
         filter: TicketListFilter,
-        page: PageRequest<TicketSort>,
+        page: OffsetRequest<TicketSort>,
         options?: QueryOptions,
     ): Promise<PageEnvelope<TicketSummary>>;
 }
@@ -56,14 +50,13 @@ Rules:
 
 - Read models are plain JSON-safe types: ISO strings for dates, `null` for empty values.
 - Sort options are a closed union, never a free string.
-- Shared types like `PageRequest`/`QueryOptions` can move to a common file when a second query port needs them.
+- Reuse the shared types: `OffsetRequest<Sort>`/`CursorRequest<Sort>`/`PageEnvelope<T>` from `@shared/pagination`, `QueryOptions` from `ports/queries/query-options.ts`. Don't define per-feature paging types.
 
 ## 2. Implement the DAO
 
 ```ts
 // src/infrastructure/database/queries/ticket-query.dao.ts
 import type {
-    PageRequest,
     QueryOptions,
     TicketListFilter,
     TicketQueryPort,
@@ -73,7 +66,7 @@ import type {
 import type { ConnectionProvider } from '@infrastructure/database/contracts';
 import { TicketMapper, type TicketRow } from '@infrastructure/database/mappers/ticket.mapper';
 import { DatabaseSources } from '@infrastructure/database/sources';
-import type { PageEnvelope } from '@shared/pagination';
+import type { OffsetRequest, PageEnvelope } from '@shared/pagination';
 import oracledb, { type Connection } from 'oracledb';
 
 /**
@@ -110,7 +103,7 @@ export class TicketQueryDao implements TicketQueryPort {
 
     list(
         filter: TicketListFilter,
-        page: PageRequest<TicketSort>,
+        page: OffsetRequest<TicketSort>,
         options?: QueryOptions,
     ): Promise<PageEnvelope<TicketSummary>> {
         const sql = `

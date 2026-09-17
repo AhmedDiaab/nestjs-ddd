@@ -115,7 +115,6 @@ export class GetTicketUseCase extends UseCase<Input, TicketSummary, NotFoundErro
 // src/application/use-cases/tickets/list-tickets.use-case.ts
 import {
     TicketQueryPortToken,
-    type PageRequest,
     type TicketListFilter,
     type TicketQueryPort,
     type TicketSort,
@@ -124,9 +123,9 @@ import {
 import { UseCase } from '@common/base';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Result } from '@shared';
-import type { PageEnvelope } from '@shared/pagination';
+import type { OffsetRequest, PageEnvelope } from '@shared/pagination';
 
-type Input = { filter: TicketListFilter; page: PageRequest<TicketSort>; username: string };
+type Input = { filter: TicketListFilter; page: OffsetRequest<TicketSort>; username: string };
 type Output = PageEnvelope<TicketSummary>;
 
 @Injectable()
