@@ -14,12 +14,12 @@
         "target": "ES2023",
         "sourceMap": true,
         "outDir": "./dist",
-        "baseUrl": "./",
         "incremental": true,
         "skipLibCheck": true,
         "strict": true,
         "forceConsistentCasingInFileNames": true,
         "noFallthroughCasesInSwitch": false,
-        "typeRoots": ["./node_modules/@types", "./src/infrastructure/auth/types"]
+        "typeRoots": ["./node_modules/@types", "./src/infrastructure/auth/types"],
+        "types": ["node", "jest"]
     }
 }

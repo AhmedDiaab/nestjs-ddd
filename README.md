@@ -23,6 +23,8 @@ pnpm verify                         # typecheck, lint, cycles, unit + e2e tests,
 
 Requires Node.js ≥ 22.18 and pnpm 10. With `DATABASE_CONFIG_JSON` unset, the app runs without a database.
 
+The project compiles with its own TypeScript (5.9) and with the TypeScript 6 bundled in current VS Code. To match the command line exactly, run **TypeScript: Select TypeScript Version → Use Workspace Version** in VS Code.
+
 With Docker (API + Oracle Database Free):
 
 ```bash

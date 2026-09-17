@@ -1,21 +1,20 @@
 {
     "compilerOptions": {
-        "baseUrl": "./",
         "paths": {
-            "@application": ["src/application/index"],
-            "@application/*": ["src/application/*"],
-            "@infrastructure": ["src/infrastructure/index"],
-            "@infrastructure/*": ["src/infrastructure/*"],
-            "@domain": ["src/domain/index"],
-            "@domain/*": ["src/domain/*"],
-            "@interface": ["src/interface/index"],
-            "@interface/*": ["src/interface/*"],
-            "@common": ["src/common/index"],
-            "@common/*": ["src/common/*"],
-            "@shared": ["src/shared/index"],
-            "@shared/*": ["src/shared/*"],
-            "@src": ["src"],
-            "@src/*": ["src/*"]
+            "@application": ["./src/application/index"],
+            "@application/*": ["./src/application/*"],
+            "@infrastructure": ["./src/infrastructure/index"],
+            "@infrastructure/*": ["./src/infrastructure/*"],
+            "@domain": ["./src/domain/index"],
+            "@domain/*": ["./src/domain/*"],
+            "@interface": ["./src/interface/index"],
+            "@interface/*": ["./src/interface/*"],
+            "@common": ["./src/common/index"],
+            "@common/*": ["./src/common/*"],
+            "@shared": ["./src/shared/index"],
+            "@shared/*": ["./src/shared/*"],
+            "@src": ["./src"],
+            "@src/*": ["./src/*"]
         }
     }
 }

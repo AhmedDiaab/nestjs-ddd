@@ -1,4 +1,7 @@
 {
-  "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "coverage", "jest.config.ts", "**/*spec.ts"]
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "types": ["node"]
+    },
+    "exclude": ["node_modules", "test", "dist", "coverage", "jest.config.ts", "**/*spec.ts"]
 }
