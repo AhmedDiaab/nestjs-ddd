@@ -38,7 +38,7 @@ Runtime defaults:
 - `NODE_ENV=production`, `PORT=3000`, `LOGGING_TO_FILE=false` (logs to stdout as JSON).
 - No `.env` files are copied: all configuration comes from environment variables.
 - `HEALTHCHECK` calls `GET /health` (liveness).
-- Exec-form `CMD`, so `SIGTERM` reaches Node and the shutdown hooks drain DB pools. Give the orchestrator a stop grace period above `drainTimeSec`.
+- Exec-form `CMD`, so `SIGTERM` reaches Node and the shutdown sequence runs. Give the orchestrator a stop grace period above the whole sequence ([Graceful shutdown](#graceful-shutdown)).
 
 ```bash
 docker build -t nestjs-ddd .
@@ -73,15 +73,17 @@ This stack is for local development and integration testing, not a production de
 
 For uptime monitors, load balancers and orchestrators. No auth, not rate limited, version neutral, successful polls not logged.
 
-| Endpoint            | 200 when                                                                     | Failure                                                             |
-| ------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `GET /health`       | the process accepts HTTP                                                     | no response                                                         |
-| `GET /health/ready` | every implemented DB source answers a ping within `DATABASE_PING_TIMEOUT_MS` | **503** with per-source `details` (error text hidden in production) |
+| Endpoint            | 200 when                                                                                                           | Failure                                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `GET /health`       | the process accepts HTTP                                                                                           | no response                                                                                            |
+| `GET /health/ready` | every implemented DB source answers a ping within `DATABASE_PING_TIMEOUT_MS`, and the process is not shutting down | **503** with per-source `details` (error text hidden in production), or `SHUTTING_DOWN` while draining |
 
 Monitoring tools should check the **status code**. Pick the endpoint by what "down" means for you:
 
 - "API process down": `/health`
 - "API down or its database unreachable": `/health/ready`
+
+A load balancer pool member should be checked with `/health/ready`, so a draining instance is taken out before it stops listening. A container **liveness** probe should use `/health`, so a brief database blip — or a shutdown in progress — doesn't get the process restarted.
 
 Response (`/health/ready`):
 
@@ -115,7 +117,23 @@ Response (`/health/ready`):
 
 ## Graceful shutdown
 
-On `SIGTERM`/`SIGINT` (Ctrl+C), Nest shutdown hooks close every DB pool with `drainTimeSec`. Give the process manager a stop timeout above that value.
+On `SIGTERM`/`SIGINT` (Ctrl+C) the process shuts down in the order a load balancer expects:
+
+| Step | What happens                                                                 | Why                                                                                        |
+| ---- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 1    | `/health/ready` starts answering **503 `SHUTTING_DOWN`**                     | the load balancer stops routing here while the instance can still serve                    |
+| 2    | it keeps serving for `SHUTDOWN_DRAIN_DELAY_MS` (default 5s)                  | a monitor needs a poll or two to notice; closing the port first turns requests into errors |
+| 3    | the server stops accepting connections; in-flight requests finish            | idle keep-alive sockets are closed so they don't hold the server open                      |
+| 4    | after `SHUTDOWN_FORCE_AFTER_MS` (default 10s), remaining connections are cut | one stuck request must not keep the process alive forever                                  |
+| 5    | the application closes: database pools drain with `drainTimeSec`             | pools outlive the requests using them                                                      |
+
+`GET /health` stays **200** the whole time: a liveness probe that fails during shutdown gets the process killed in the middle of the requests it is trying to finish.
+
+Set the stop grace period of whatever runs the process (Kubernetes `terminationGracePeriodSeconds`, Docker `--stop-timeout`, NSSM) **above** `SHUTDOWN_DRAIN_DELAY_MS + SHUTDOWN_FORCE_AFTER_MS + drainTimeSec`, or it will `SIGKILL` in the middle of the sequence.
+
+Sizing the drain delay: it must exceed the load balancer's health-check interval × unhealthy threshold. A monitor polling every 5 seconds needing 2 failures needs more than 10 seconds, not the 5 second default.
+
+This is deliberately **not** `app.enableShutdownHooks()`: Nest's own handler runs the destroy hooks — which close the database pools — before the HTTP server stops, so requests still in flight lose their connection.
 
 ## Scheduled jobs
 

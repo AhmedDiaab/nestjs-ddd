@@ -20,6 +20,8 @@ export {
 
 export { ConfigPortToken, LoggerPortToken } from './tokens';
 
+export { type ShutdownPort, ShutdownPortToken } from './shutdown.port';
+
 export {
     type DatabaseInfo,
     type DatabaseInfoQueryPort,

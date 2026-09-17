@@ -3,6 +3,7 @@ import { ConfigModule } from '@infrastructure/config';
 import { ContextModule } from '@infrastructure/context';
 import { DatabaseModule } from '@infrastructure/database';
 import { HttpModule } from '@infrastructure/http';
+import { LifecycleModule } from '@infrastructure/lifecycle';
 import { PinoLoggerModule } from '@infrastructure/logging';
 import { ThrottlingModule } from '@infrastructure/throttling';
 import { Module } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { Module } from '@nestjs/common';
         ConfigModule,
         PinoLoggerModule,
         ContextModule,
+        LifecycleModule,
         DatabaseModule,
         HttpModule,
         AuthModule,
@@ -22,6 +24,7 @@ import { Module } from '@nestjs/common';
         ConfigModule,
         PinoLoggerModule,
         ContextModule,
+        LifecycleModule,
         DatabaseModule,
         HttpModule,
         AuthModule,

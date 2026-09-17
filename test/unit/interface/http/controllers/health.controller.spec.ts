@@ -1,4 +1,4 @@
-import type { ConfigPort } from '@application/ports';
+import type { ConfigPort, ShutdownPort } from '@application/ports';
 import type { ConnectionProvider, SourceHealth } from '@infrastructure/database/contracts';
 import { HealthController } from '@interface/http/controllers';
 import { ServiceUnavailableException } from '@nestjs/common';
@@ -13,14 +13,15 @@ const source = (overrides: Partial<SourceHealth>): SourceHealth => ({
 });
 
 describe('HealthController', () => {
-    const createController = (sources: SourceHealth[], production = false) => {
+    const createController = (sources: SourceHealth[], production = false, draining = false) => {
         const db = { health: jest.fn(() => Promise.resolve(sources)) };
         const config = {
             get: () => 1000,
             isProduction: () => production,
         } as unknown as ConfigPort;
+        const shutdown: ShutdownPort = { isShuttingDown: () => draining, begin: () => true };
         return {
-            controller: new HealthController(db as unknown as ConnectionProvider, config),
+            controller: new HealthController(db as unknown as ConnectionProvider, config, shutdown),
             db,
         };
     };
@@ -87,5 +88,29 @@ describe('HealthController', () => {
         // Assert
         const { details } = error.getResponse() as { details: SourceHealth[] };
         expect(details[0].error).toBeUndefined();
+    });
+
+    it('fails readiness while the process is shutting down, before dependencies are touched', async () => {
+        // Arrange: draining, database still perfectly healthy
+        const { controller, db } = createController([source({ ok: true })], false, true);
+
+        // Act
+        const error = await readyError(controller);
+
+        // Assert
+        expect(error.getStatus()).toBe(503);
+        expect(error.getResponse()).toMatchObject({ code: 'SHUTTING_DOWN' });
+        expect(db.health).not.toHaveBeenCalled();
+    });
+
+    it('keeps liveness green while draining, so the process is not killed mid-request', () => {
+        // Arrange
+        const { controller } = createController([], false, true);
+
+        // Act
+        const body = controller.live();
+
+        // Assert
+        expect(body).toEqual({ status: 'ok' });
     });
 });

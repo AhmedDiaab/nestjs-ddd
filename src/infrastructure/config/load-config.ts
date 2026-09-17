@@ -7,6 +7,7 @@ import {
     jwtSchema,
     loggingSchema,
     schedulerSchema,
+    shutdownSchema,
 } from '@infrastructure/config/schemas';
 import { z } from 'zod';
 import { envBool, envList, envString } from './env.util';
@@ -21,6 +22,7 @@ const rootSchema = z.object({
     database: databaseConfigSchema.optional(),
     jwt: jwtSchema,
     scheduler: schedulerSchema,
+    shutdown: shutdownSchema,
 });
 
 // hydrate from process.env once, then validate
@@ -107,6 +109,10 @@ function hydrate() {
         scheduler: {
             enabled: envBool(env.SCHEDULER_ENABLED),
             timezone: envString(env.SCHEDULER_TIMEZONE),
+        },
+        shutdown: {
+            drainDelayMs: envString(env.SHUTDOWN_DRAIN_DELAY_MS),
+            forceAfterMs: envString(env.SHUTDOWN_FORCE_AFTER_MS),
         },
     };
 }

@@ -1,7 +1,8 @@
 import type { Server as HttpServer } from 'node:http';
-import type { ConfigPort } from '@application/ports';
-import { ConfigPortToken } from '@application/ports';
+import type { ConfigPort, LoggerPort, ShutdownPort } from '@application/ports';
+import { ConfigPortToken, LoggerPortToken, ShutdownPortToken } from '@application/ports';
 import { InvalidConfigError } from '@infrastructure/config';
+import { runGracefulShutdown } from '@infrastructure/lifecycle';
 import { setupSwagger } from '@interface/http/swagger';
 import { VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -21,8 +22,8 @@ async function bootstrap() {
     const logger = app.get(Logger);
     app.useLogger(logger);
 
-    // run OnModuleDestroy (DB pool drain) on SIGTERM/SIGINT
-    app.enableShutdownHooks();
+    // Shutdown is handled below instead of app.enableShutdownHooks(): Nest's own handler closes
+    // the database pools before the HTTP server, which fails whatever is still in flight.
 
     // get config service
     const config = app.get<ConfigPort>(ConfigPortToken);
@@ -64,9 +65,38 @@ async function bootstrap() {
     const env = config.get('app.env');
     await app.listen(port);
 
+    installShutdownHandlers(app, server, config);
+
     logger.log(
         `API listening on http://localhost:${port} [${env}]${swaggerPath ? ` docs: /${swaggerPath}` : ''}`,
     );
+}
+
+/**
+ * Fail readiness first, keep serving while the load balancer notices, then close the server
+ * and only afterwards the application (database pools).
+ */
+function installShutdownHandlers(
+    app: NestExpressApplication,
+    server: HttpServer,
+    config: ConfigPort,
+): void {
+    const shutdown = app.get<ShutdownPort>(ShutdownPortToken);
+    const logger = app.get<LoggerPort>(LoggerPortToken);
+
+    for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+        process.on(signal, () => {
+            void runGracefulShutdown({
+                signal,
+                server,
+                shutdown,
+                logger,
+                drainDelayMs: config.get('shutdown.drainDelayMs'),
+                forceAfterMs: config.get('shutdown.forceAfterMs'),
+                closeApp: () => app.close(),
+            });
+        });
+    }
 }
 
 bootstrap().catch((error: unknown) => {

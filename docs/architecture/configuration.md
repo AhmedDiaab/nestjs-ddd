@@ -62,6 +62,15 @@ Adding a variable: [Add a config variable](../guides/add-config-variable.md).
 | `SCHEDULER_ENABLED`                                         | `false`                         | run the cron jobs in this instance ([Operations → Scheduled jobs](operations.md#scheduled-jobs))                                |
 | `SCHEDULER_TIMEZONE`                                        | `UTC`                           | IANA timezone the cron expressions are read in                                                                                  |
 
+### Shutdown
+
+| Variable                  | Default | Notes                                                                                                         |
+| ------------------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| `SHUTDOWN_DRAIN_DELAY_MS` | `5000`  | readiness fails for this long before the server closes; set it above the load balancer's interval × threshold |
+| `SHUTDOWN_FORCE_AFTER_MS` | `10000` | in-flight requests get this long, then their connections are cut                                              |
+
+The process manager's stop grace period must exceed both, plus the pool `drainTimeSec` ([Operations → Graceful shutdown](operations.md#graceful-shutdown)).
+
 ### Outbound HTTP
 
 Defaults for every call a gateway makes ([Call another service](../guides/call-another-service.md)). A single request may override the timeout and the retry count.

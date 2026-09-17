@@ -103,6 +103,7 @@ A repository is not "any class with SQL": a read-only list belongs in a DAO even
 | **Circuit breaker**     | stops calling an upstream that keeps failing, then lets one trial call through                            |
 | **Request context**     | the correlation id of the current request, carried through async calls (`RequestContextPort`)             |
 | **Context user**        | the acting username sent to Oracle as `CLIENT_IDENTIFIER` for one call, then cleared                      |
+| **Draining**            | the window after SIGTERM where readiness fails but the instance still serves what it already accepted     |
 | **Tag**                 | a label like `tickets.save` attached to a call for logs and errors, never the SQL text                    |
 | **Dialect**             | database type of a source (`oracle` implemented; others are placeholders)                                 |
 
