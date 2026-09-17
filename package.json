@@ -30,7 +30,8 @@
         "test:cov": "jest --coverage",
         "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
         "test:e2e": "jest --config ./test/jest-e2e.json",
-        "test:oracle": "jest --config ./test/jest-integration.json --runInBand"
+        "test:oracle": "jest --config ./test/jest-integration.json --runInBand",
+        "test:service-scripts": "docker run --rm --platform linux/amd64 -v \"$PWD\":/repo:ro mcr.microsoft.com/powershell:lts-alpine-3.20 pwsh -NoProfile -File /repo/test/windows-service/service-scripts.tests.ps1"
     },
     "dependencies": {
         "@nest-lab/throttler-storage-redis": "^1.2.0",

@@ -19,6 +19,7 @@ NestJS 11 layered/DDD API template: TypeScript 5 (strict), Express 5, Zod 4, nod
 | Unit tests / one file                                   | `pnpm test` / `pnpm exec jest test/unit/path/to.spec.ts` |
 | E2E tests                                               | `pnpm test:e2e`                                          |
 | Live Oracle tests (needs a DB)                          | `ORACLE_IT_PASSWORD=… pnpm test:oracle`                  |
+| Windows service scripts (needs Docker)                  | `pnpm test:service-scripts`                              |
 | Build                                                   | `pnpm build`                                             |
 | Run locally                                             | `pnpm start:dev` (needs `.env.development`)              |
 | Run with Docker (API + Oracle)                          | `docker compose --env-file .env.docker up --build`       |

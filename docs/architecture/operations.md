@@ -130,6 +130,8 @@ Prerequisites: [NSSM](https://nssm.cc) on PATH, Node.js ≥ 22.18, `pnpm install
 .\stop-service.ps1 -ServiceName MyApi -Remove          # stop and unregister
 ```
 
+Checked without Windows by `pnpm test:service-scripts` (Docker): both scripts parse, and they run in the PowerShell container against recorders for `nssm`, `node` and `Get-Service` (fresh install, reinstall, Node too old, missing build, failing NSSM call, stop, stop + remove, already stopped, missing service). Registering a real service is still verified on Windows.
+
 What `start-service.ps1` does:
 
 1. Checks nssm, node version, `dist\main.js`, and the env file (warns if missing).

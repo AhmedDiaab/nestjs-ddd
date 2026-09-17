@@ -2,14 +2,15 @@
 
 ## Commands
 
-| Command                             | What                                                                                                                           |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm test`                         | unit tests (`test/unit/**/*.spec.ts`)                                                                                          |
-| `pnpm test:watch` / `pnpm test:cov` | watch / coverage (`coverage/`)                                                                                                 |
-| `pnpm test:e2e`                     | e2e tests (`test/e2e/**/*.e2e-spec.ts`); boots `AppModule` over HTTP                                                           |
-| `pnpm test:oracle`                  | live Oracle tests (`test/integration/**/*.int-spec.ts`); skipped unless `ORACLE_IT_PASSWORD` is set, not part of `verify`      |
-| `pnpm typecheck`                    | `tsc --noEmit` over `src` and `test`. **Jest only transpiles**, so type errors (and `@ts-expect-error` checks) are caught here |
-| `pnpm verify`                       | everything a change must pass: typecheck, lint, lint:test, circular, unit, e2e, build                                          |
+| Command                             | What                                                                                                                                                                                          |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test`                         | unit tests (`test/unit/**/*.spec.ts`)                                                                                                                                                         |
+| `pnpm test:watch` / `pnpm test:cov` | watch / coverage (`coverage/`)                                                                                                                                                                |
+| `pnpm test:e2e`                     | e2e tests (`test/e2e/**/*.e2e-spec.ts`); boots `AppModule` over HTTP                                                                                                                          |
+| `pnpm test:oracle`                  | live Oracle tests (`test/integration/**/*.int-spec.ts`); skipped unless `ORACLE_IT_PASSWORD` is set, not part of `verify`                                                                     |
+| `pnpm test:service-scripts`         | runs `start-service.ps1`/`stop-service.ps1` in the PowerShell container with `nssm`, `node` and `Get-Service` faked; asserts the NSSM calls per scenario (needs Docker, not part of `verify`) |
+| `pnpm typecheck`                    | `tsc --noEmit` over `src` and `test`. **Jest only transpiles**, so type errors (and `@ts-expect-error` checks) are caught here                                                                |
+| `pnpm verify`                       | everything a change must pass: typecheck, lint, lint:test, circular, unit, e2e, build                                                                                                         |
 
 ## Layout
 
@@ -18,6 +19,7 @@ test/
 ├── unit/          # mirrors src/: unit/domain, unit/application, unit/infrastructure, unit/interface, unit/layers
 ├── e2e/           # HTTP tests
 ├── integration/   # live database tests (pnpm test:oracle)
+├── windows-service/ # PowerShell checks for the NSSM scripts (pnpm test:service-scripts)
 ├── fixtures/      # builders for config objects etc. (e.g. fixtures/database/oracle-source.ts)
 └── fakes/         # in-memory port implementations (added per feature)
 ```
@@ -47,6 +49,7 @@ Every test uses **Arrange-Act-Assert** with `// Arrange`, `// Act`, `// Assert` 
 - `env-config.adapter.spec.ts`: defaults for unset env, list/bool parsing, **no secrets in errors**.
 - `provider.factory.spec.ts`: typed-token binding checks (`@ts-expect-error`, verified by `pnpm typecheck`).
 - `app.e2e-spec.ts`: envelope, request id, health, 404, 401 without a database.
+- `tickets.int-spec.ts` (live, `example/tickets` branch): the Tickets MERGE upsert (insert and update), lookup, and filtered paging with the whitelisted `ORDER BY` against a real `tickets` table.
 - `unit-of-work.int-spec.ts` (live): repository-style writes inside `DatabaseUnitOfWork` commit together with the actor as `CLIENT_IDENTIFIER`, and roll back together on a failed `Result` or a thrown error.
 - `oracle.client.int-spec.ts` (live): `CLIENT_IDENTIFIER` visible inside the call and `NULL` on the next borrow of the **same session** (pool of 1), also after the callback throws; byte truncation; commit/rollback; `ORA-00001` → `ConflictError`.
 
