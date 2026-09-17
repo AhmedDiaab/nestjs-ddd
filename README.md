@@ -110,8 +110,15 @@ Implement `DatabaseClient` (`withConnection`, `transaction`, `ping`, `close`, `s
 
 ### Health
 
-- `GET /health`: liveness.
-- `GET /health/ready`: pings every implemented source. Returns 503 when one fails. Error text is hidden in production.
+For monitoring tools (uptime checkers, load balancers, orchestrators). No auth, not rate limited, version neutral (no `/v1`). The tool should check the **HTTP status**, not the body.
+
+| Endpoint | 200 means | Non-200 | Use when the tool should alert on |
+| --- | --- | --- | --- |
+| `GET /health` | process is up and serving HTTP | no response / connection refused | API process down |
+| `GET /health/ready` | every implemented DB source answered a ping (within `DATABASE_PING_TIMEOUT_MS`) | 503 + per-source details | API down **or** database unreachable |
+
+- Successful polls are not written to the access log; failures are.
+- Error text per source is hidden in production.
 
 ## 6. Cross-cutting Behaviour
 

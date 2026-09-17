@@ -58,6 +58,10 @@ function consoleTarget(config: ConfigPort): TransportTargetOptions {
     };
 }
 
+export function isHealthCheck(url: string | undefined): boolean {
+    return !!url && /^\/health(\/ready)?\/?(\?.*)?$/.test(url);
+}
+
 export const generatePinoOptions = (config: ConfigPort): Params => {
     const requestIdHeader = config.get<string>('logging.requestIdHeader')!;
     const targets = [fileRotationTarget(config), consoleTarget(config)].filter(
@@ -110,9 +114,11 @@ export const generatePinoOptions = (config: ConfigPort): Params => {
                 return `ERR ${req.method} ${req.url} ${res.statusCode} - ${err.message}`;
             },
             // 5xx are logged with details by GlobalExceptionFilter; keep one access-log line here
-            customLogLevel(_req, res, err) {
+            customLogLevel(req, res, err) {
                 if (err || res.statusCode >= 500) return 'error';
                 if (res.statusCode >= 400) return 'warn';
+                // monitoring tools poll health endpoints; keep successful polls out of the logs
+                if (isHealthCheck(req.url)) return 'silent';
                 return 'info';
             },
         } as PinoHttpOptions,
