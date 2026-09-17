@@ -208,29 +208,69 @@ See [Write tests](write-tests.md).
 
 ## Multiple aggregates in one transaction
 
-`ConnectionProvider.transaction` spans one callback. To save several aggregates atomically, inject `UnitOfWorkPortToken` in the use case and wrap the repository calls:
+`ConnectionProvider.transaction` spans one callback. To save several aggregates atomically, inject `UnitOfWorkPortToken` in the use case and wrap the repository calls. Example from `example/tickets` (`POST /v1/tickets/close` closes several tickets all-or-nothing):
 
 ```ts
-// src/application/use-cases/tickets/merge-tickets.use-case.ts (excerpt)
-constructor(
-    @Inject(TicketRepositoryToken) private readonly tickets: TicketRepository,
-    @Inject(UnitOfWorkPortToken) private readonly unitOfWork: UnitOfWorkPort,
-) {
-    super();
-}
+// src/application/use-cases/tickets/close-tickets.use-case.ts
+import { NotFoundError } from '@application/errors';
+import {
+    DomainEventPublisherPortToken,
+    UnitOfWorkPortToken,
+    type DomainEventPublisherPort,
+    type UnitOfWorkPort,
+} from '@application/ports';
+import { UseCase } from '@common/base';
+import {
+    TicketRepositoryToken,
+    type Ticket,
+    type TicketAlreadyClosedError,
+    type TicketRepository,
+} from '@domain';
+import { Inject, Injectable } from '@nestjs/common';
+import type { Result } from '@shared';
 
-async execute({ sourceId, targetId, username }: Input): Promise<Result<Output, Failure>> {
-    return this.unitOfWork.run(
-        async () => {
-            const source = await this.tickets.findById(sourceId, { actor: username });
-            if (!source) return this.err(new NotFoundError('Ticket not found'));
-            // ... change both aggregates
-            await this.tickets.save(source, { actor: username });
-            await this.tickets.save(target, { actor: username });
-            return this.ok({ id: targetId });
-        },
-        { actor: username },
-    );
+type Input = { ids: string[]; username: string };
+type Output = { ids: string[]; status: 'closed' };
+type Failure = NotFoundError | TicketAlreadyClosedError;
+
+/**
+ * Closes several tickets all-or-nothing: if any ticket is missing or already closed, the tickets
+ * closed before it are rolled back. Events are published only after the unit of work commits.
+ */
+@Injectable()
+export class CloseTicketsUseCase extends UseCase<Input, Output, Failure> {
+    constructor(
+        @Inject(TicketRepositoryToken) private readonly tickets: TicketRepository,
+        @Inject(UnitOfWorkPortToken) private readonly unitOfWork: UnitOfWorkPort,
+        @Inject(DomainEventPublisherPortToken) private readonly events: DomainEventPublisherPort,
+    ) {
+        super();
+    }
+
+    async execute(input: Input): Promise<Result<Output, Failure>> {
+        const options = { actor: input.username };
+        const ids = [...new Set(input.ids)];
+        const closed: Ticket[] = [];
+
+        const result = await this.unitOfWork.run(async (): Promise<Result<Output, Failure>> => {
+            for (const id of ids) {
+                const ticket = await this.tickets.findById(id, options);
+                if (!ticket) return this.err(new NotFoundError(`Ticket ${id} not found`)); // rollback → 404
+
+                const closing = ticket.close(input.username, new Date());
+                if (!closing.ok) return this.err(closing.error); // rollback → 409
+
+                await this.tickets.save(ticket, options); // joins the unit's transaction
+                closed.push(ticket);
+            }
+            return this.ok({ ids, status: 'closed' });
+        }, options);
+
+        if (result.ok) {
+            await this.events.publish(closed.flatMap((ticket) => ticket.pullEvents()));
+        }
+        return result;
+    }
 }
 ```
 
@@ -238,4 +278,6 @@ async execute({ sourceId, targetId, username }: Input): Promise<Result<Output, F
 - Commit happens once when `work` succeeds. A thrown error **or a returned failed `Result`** rolls everything back; the failed `Result` is still returned.
 - The unit covers the `main` source only; there are no transactions spanning two databases.
 - The unit's `actor` is the context user for every joined call.
+- Publish domain events **after** `run` returns `ok`, never inside it (a rollback would leave handlers reacting to changes that don't exist).
+- Tests: `test/unit/application/use-cases/tickets/close-tickets.use-case.spec.ts` (in-memory unit of work that restores a snapshot) and `test/integration/tickets.int-spec.ts` (rollback on a real table).
 - Never pass connections through use cases.
