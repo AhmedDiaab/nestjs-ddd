@@ -1,7 +1,7 @@
-import { ProblemTypes, type ProblemLike } from '@shared/problem';
-import { DomainError } from './domain-error';
+import { ProblemTypes, type ProblemLike } from '@shared';
+import { DomainError } from './domain.error';
 
-export class NotFoundError extends DomainError {
+export class AggregateNotFoundError extends DomainError {
     constructor(
         public readonly aggregate: string,
         public readonly id: string,

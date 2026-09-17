@@ -1,4 +1,4 @@
-import { ProblemTypes, type PresentableError, type ProblemLike } from '@shared/problem';
+import { ProblemTypes, type PresentableError, type ProblemLike } from '@shared';
 
 export abstract class DomainError extends Error implements PresentableError {
     readonly isDomainError = true as const;
