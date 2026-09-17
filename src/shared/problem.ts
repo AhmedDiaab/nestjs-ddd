@@ -1,3 +1,5 @@
+import { APP_NAME as appName } from './app.constants';
+
 // Semantic kinds only (no HTTP here)
 export type ProblemKind =
     | 'validation'
@@ -7,7 +9,8 @@ export type ProblemKind =
     | 'forbidden'
     | 'service_unavailable'
     | 'bad_request'
-    | 'internal';
+    | 'internal'
+    | 'not_implemented';
 
 // Minimal problem shape that core can emit
 export type ProblemLike = {
@@ -59,12 +62,13 @@ export interface PresentableError {
 
 // Centralized type URLs (pure strings; safe for core)
 export const ProblemTypes = {
-    Validation: 'urn:shift-roster:problem:validation',
-    NotFound: 'urn:shift-roster:problem:not-found',
-    Conflict: 'urn:shift-roster:problem:conflict',
-    Unauthorized: 'urn:shift-roster:problem:unauthorized',
-    Forbidden: 'urn:shift-roster:problem:forbidden',
-    ServiceUnavailable: 'urn:shift-roster:problem:service-unavailable',
-    BadRequest: 'urn:shift-roster:problem:bad-request',
-    Internal: 'urn:shift-roster:problem:internal',
+    Validation: `urn:${appName}:problem:validation`,
+    NotFound: `urn:${appName}:problem:not-found`,
+    Conflict: `urn:${appName}:problem:conflict`,
+    Unauthorized: `urn:${appName}:problem:unauthorized`,
+    Forbidden: `urn:${appName}:problem:forbidden`,
+    ServiceUnavailable: `urn:${appName}:problem:service-unavailable`,
+    BadRequest: `urn:${appName}:problem:bad-request`,
+    Internal: `urn:${appName}:problem:internal`,
+    NotImplemented: `urn:${appName}:problem:not-implemented`,
 } as const;

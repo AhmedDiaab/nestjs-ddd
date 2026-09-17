@@ -1,5 +1,4 @@
-import { type Result } from '@shared/result';
-import { type Awaitable } from '@shared/type-utils';
+import { type Awaitable, type Result } from '@shared';
 
 export interface IUseCase<Input, Output, Error = never> {
     execute(input: Input): Awaitable<Result<Output, Error>>;
@@ -10,4 +9,4 @@ export type ICommandUseCase<Input, Output = void, Error = never> = IUseCase<Inpu
 
 export type IQueryUseCase<Input, Output, Error = never> = IUseCase<Input, Output, Error>;
 
-export const UC_Token = (name: string) => Symbol.for(`UseCase:${name}>`);
+export const UC_Token = (name: string) => Symbol.for(`UseCase:${name}`);

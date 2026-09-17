@@ -1,5 +1,5 @@
 import type { IUseCase } from '@common/contracts/use-case';
-import { Result, type Err, type Ok } from '@shared/result';
+import { Result, type Err, type Ok } from '@shared';
 
 export abstract class UseCase<Input, Output, Error> implements IUseCase<Input, Output, Error> {
     abstract execute(input: Input): Promise<Result<Output, Error>>;
