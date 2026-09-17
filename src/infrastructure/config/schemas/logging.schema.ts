@@ -7,8 +7,12 @@ export const loggingSchema = z.object({
     toFile: z.boolean().default(true),
     directory: z.string().default('logs'),
     fileName: z.string().default('app.log'),
-    filesLimit: z.number().min(1).max(365).default(14),
-    maxSize: z.string().default('10M'),
+    filesLimit: z.coerce.number().int().min(1).max(365).default(14),
+    maxSize: z
+        .string()
+        .regex(/^\d+(\.\d+)?[bkmg]?$/i)
+        .default('10m'), // pino-roll size, e.g. 10m, 1g
+    pretty: z.boolean().optional(), // default: on in development only
 });
 
 export type LoggingConfig = z.infer<typeof loggingSchema>;

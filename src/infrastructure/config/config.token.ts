@@ -1,1 +1,2 @@
-export const ConfigPortToken = Symbol('ConfigPort');
+/** @deprecated import from `@application/ports` */
+export { ConfigPortToken } from '@application/ports/tokens';
