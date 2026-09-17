@@ -16,6 +16,7 @@ NestJS 11 starter template for layered / DDD HTTP services: consistent response 
 
 ```bash
 pnpm install
+pnpm rename-project orders "Order Desk"   # new project: set its name (kebab-case) and display title
 cp .env.example .env.development   # set NODE_ENV=development and JWT_SECRET (≥ 32 chars)
 pnpm start:dev                      # http://localhost:3000/v1, docs at /docs, health at /health
 pnpm verify                         # typecheck, lint, cycles, unit + e2e tests, build
@@ -44,12 +45,13 @@ docker compose --env-file .env.docker up --build
 
 ## Scripts
 
-| Script                                                     | Purpose                                                                                       |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `pnpm start:dev` / `start:debug` / `start:repl`            | local development                                                                             |
-| `pnpm build` / `start:prod`                                | production build / run (`NODE_ENV` from environment)                                          |
-| `pnpm verify`                                              | full quality gate                                                                             |
-| `pnpm typecheck` / `lint` / `lint:test` / `check:circular` | individual checks                                                                             |
-| `pnpm test` / `test:e2e` / `test:cov` / `test:oracle`      | tests                                                                                         |
-| `docker compose --env-file .env.docker up --build`         | API + Oracle locally ([Operations](docs/architecture/operations.md#docker))                   |
-| `.\start-service.ps1` / `.\stop-service.ps1`               | Windows service via NSSM ([Operations](docs/architecture/operations.md#windows-service-nssm)) |
+| Script                                                     | Purpose                                                                                                             |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `pnpm start:dev` / `start:debug` / `start:repl`            | local development                                                                                                   |
+| `pnpm build` / `start:prod`                                | production build / run (`NODE_ENV` from environment)                                                                |
+| `pnpm verify`                                              | full quality gate                                                                                                   |
+| `pnpm rename-project <kebab-name> ["Title"]`               | rename a new project: `package.json`, `APP_NAME` (problem URNs), Swagger title, compose names, Windows service name |
+| `pnpm typecheck` / `lint` / `lint:test` / `check:circular` | individual checks                                                                                                   |
+| `pnpm test` / `test:e2e` / `test:cov` / `test:oracle`      | tests                                                                                                               |
+| `docker compose --env-file .env.docker up --build`         | API + Oracle locally ([Operations](docs/architecture/operations.md#docker))                                         |
+| `.\start-service.ps1` / `.\stop-service.ps1`               | Windows service via NSSM ([Operations](docs/architecture/operations.md#windows-service-nssm))                       |

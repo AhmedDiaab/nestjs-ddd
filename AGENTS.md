@@ -11,6 +11,7 @@ NestJS 11 layered/DDD API template: TypeScript 5 (strict), Express 5, Zod 4, nod
 | Goal                                                    | Command                                                  |
 | ------------------------------------------------------- | -------------------------------------------------------- |
 | Install                                                 | `pnpm install`                                           |
+| Rename a project created from this template             | `pnpm rename-project <kebab-name> ["Title"]`             |
 | **Done check (run before claiming a task is complete)** | `pnpm verify`                                            |
 | Type-check src + test                                   | `pnpm typecheck`                                         |
 | Lint                                                    | `pnpm lint` (src), `pnpm lint:test` (test)               |

@@ -13,6 +13,8 @@ Every JSON response has one shape (`src/shared/response-envelope.ts`):
 { "success": false, "error": { "message": "...", "code": "...", "details": ..., "type": "urn:nestjs-ddd:problem:not-found" }, "meta": { ... } }
 ```
 
+`type` is a stable URN built from `APP_NAME` (`src/shared/app.constants.ts`), which must equal the `package.json` name (a unit test checks this). Set both for a new project with `pnpm rename-project <kebab-name>`; don't change it after clients depend on the URNs.
+
 `ResponseFormatterInterceptor`:
 
 | Handler returns                                | Response                                                             |

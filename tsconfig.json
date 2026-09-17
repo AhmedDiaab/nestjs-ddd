@@ -21,5 +21,6 @@
         "noFallthroughCasesInSwitch": false,
         "typeRoots": ["./node_modules/@types", "./src/infrastructure/auth/types"],
         "types": ["node", "jest"]
-    }
+    },
+    "exclude": ["node_modules", "dist", "coverage", "scripts/rename-project.mts"]
 }
