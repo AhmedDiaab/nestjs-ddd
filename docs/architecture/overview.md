@@ -61,7 +61,8 @@ src/
 │   ├── controllers/        # HealthController, DatabaseInfoController
 │   ├── common/             # FallbackController (404), ResponseFormatterInterceptor
 │   ├── decorators/         # @UseZodHttp, @Validated, @CurrentUser
-│   ├── guards/             # JwtGuard, getAuthenticatedUser, readGuardInput
+│   ├── errors/             # HTTP-only errors (CsrfRejectedError); business errors live in application/domain
+│   ├── guards/             # JwtGuard, getAuthenticatedUser, readGuardInput, CsrfGuard
 │   ├── interceptors/       # ZodHttpInterceptor
 │   ├── pipes/ schemas/ swagger/
 │   ├── error-presenter.ts  # problem kind → HTTP status

@@ -1,4 +1,4 @@
-export { CsrfGuard, CsrfRejectedError } from './csrf.guard';
+export { CsrfGuard } from './csrf.guard';
 
 export { JwtGuard } from './jwt.guard';
 

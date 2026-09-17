@@ -1,20 +1,9 @@
-import { ForbiddenError } from '@application/errors';
 import { ConfigPortToken, type ConfigPort } from '@application/ports';
 import { Inject, Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
-import type { ProblemLike } from '@shared';
 import type { Request } from 'express';
+import { CsrfRejectedError } from '../errors';
 
 const STATE_CHANGING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-
-export class CsrfRejectedError extends ForbiddenError {
-    constructor() {
-        super('Cross-site request rejected');
-    }
-
-    override toProblem(): ProblemLike {
-        return { ...super.toProblem(), code: 'CSRF_REJECTED' };
-    }
-}
 
 function originOf(url: string | undefined): string | undefined {
     if (!url) return undefined;

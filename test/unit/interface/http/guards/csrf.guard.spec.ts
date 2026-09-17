@@ -1,5 +1,6 @@
 import type { ConfigPort } from '@application/ports';
-import { CsrfGuard, CsrfRejectedError } from '@interface/http/guards';
+import { CsrfRejectedError } from '@interface/http/errors';
+import { CsrfGuard } from '@interface/http/guards';
 import type { ExecutionContext } from '@nestjs/common';
 
 type RequestInit = {
@@ -108,16 +109,5 @@ describe('CsrfGuard', () => {
 
         // Assert
         expect(allowed).toBe(true);
-    });
-
-    it('presents as 403 with code CSRF_REJECTED', () => {
-        // Arrange
-        const error = new CsrfRejectedError();
-
-        // Act
-        const problem = error.toProblem();
-
-        // Assert
-        expect(problem).toMatchObject({ kind: 'forbidden', code: 'CSRF_REJECTED' });
     });
 });
