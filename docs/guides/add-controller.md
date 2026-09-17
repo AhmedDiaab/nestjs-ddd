@@ -147,7 +147,7 @@ controllers: [HealthController, DatabaseInfoController, TicketsController, Fallb
 - POST that doesn't create a resource: add `@HttpCode(HttpStatus.OK)`.
 - Public route on a guarded controller: put `@UseGuards(JwtGuard)` on methods instead of the class.
 - Guards that read request data: validate with `readGuardInput(context, 'params', schema)` and throw `ForbiddenError`/`UnauthorizedError`.
-- Swagger: `@ApiTags`, security decorators, and `@ApiOkResponse({ type })` when you need typed response docs.
+- Swagger: `@ApiTags` and security decorators. Request docs come from `@UseZodHttp` automatically; add `@ZodResponse(200, schema)` (from `../swagger`) to document the response body. Use `.describe('...')` on schema fields for descriptions.
 - Versioned change: `@Controller({ path: 'tickets', version: '2' })`.
 
 Tests: [Write tests → HTTP](write-tests.md#http-end-to-end).

@@ -88,6 +88,8 @@ if (!allowed) throw new ForbiddenError('Insufficient region privileges'); // 403
 - Served at `/docs` when `SWAGGER_ENABLED=true`; defaults to on outside production and off in production.
 - Security schemes: `cookie-auth` and `bearer-auth` (`swagger/swagger.constants.ts`); mark routes with `@ApiBearerAuth(BEARER_SECURITY)` / `@ApiCookieAuth(COOKIE_SECURITY)`.
 - Group endpoints with `@ApiTags`; hide internal controllers with `@ApiExcludeController()`.
+- **Inputs come from the Zod schemas.** `@UseZodHttp({ body, query, params, headers })` on a method also adds the Swagger request body, one query/path parameter or header per schema property (type, constraints, defaults, enums, `.describe()` text, required flags). There are no DTO classes to keep in sync. Generation uses Zod's `z.toJSONSchema` with the OpenAPI 3.0 target (`swagger/zod-openapi.ts`).
+- **Responses:** add `@ZodResponse(status, schema)` to document `data` inside the `{ success: true, data, meta }` envelope. Errors use the envelope in [Response envelope](#response-envelope).
 
 ## Versioning
 
