@@ -84,6 +84,7 @@ if (!allowed) throw new ForbiddenError('Insufficient region privileges'); // 403
 
 - Throw an `AppError`; don't `return false`, which gives a generic 403 without details.
 - Each guard that calls a use case adds database round trips. Combine checks (one query) or cache them when latency matters.
+- Authorization that needs the database goes through a query port, never SQL in the guard; checks about the **resource** (ownership, row filtering) belong to the use case instead: [Add an authentication strategy → Authorization that needs the database](../guides/add-an-auth-strategy.md#authorization-that-needs-the-database).
 
 ## Swagger
 

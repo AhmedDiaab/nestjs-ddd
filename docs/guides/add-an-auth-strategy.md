@@ -240,12 +240,130 @@ Guards **throw** `UnauthorizedError`/`ForbiddenError` rather than returning `fal
 
 ## Authorization comes after
 
-A strategy answers _who is calling_. _What they may do_ is a separate check:
+A strategy answers _who is calling_. _What they may do_ is a separate check, and where it belongs depends on what it needs to know:
 
-- simple cases: a `@Roles('admin')` decorator plus a guard reading `req.user` through `getAuthenticatedUser(context)` and throwing `ForbiddenError`;
-- anything that needs data (does this user own this ticket?): keep it in the use case, where the aggregate is loaded, and return `Result.err(new ForbiddenError(...))`.
+| The check                                                       | Where it belongs                             | Needs the database?          |
+| --------------------------------------------------------------- | -------------------------------------------- | ---------------------------- |
+| "the token says `admin` / `role=…`"                             | guard, reading `req.user`                    | no                           |
+| "this user's roles/regions are stored in a table"               | guard **through a query port** (see below)   | yes, one cached lookup       |
+| "this user owns this ticket" / "this ticket is in their region" | use case, where the aggregate is loaded      | yes, as part of the work     |
+| "only rows of this user's tenant are visible"                   | the query itself (a bound `WHERE` predicate) | yes, and never as a 403 gate |
 
-Don't put SQL in a guard: it runs before validation and on every request, including ones that fail validation a moment later.
+Simple case, no database. The template's `JWTPayload` (`src/domain/auth/jwt-payload.interface.ts`) carries `admin: boolean`; add a `roles` field there if your tokens have one, and the strategy passes it through untouched:
+
+```ts
+// src/interface/http/guards/roles.guard.ts
+@Injectable()
+export class RolesGuard implements CanActivate {
+    constructor(private readonly reflector: Reflector) {}
+
+    canActivate(context: ExecutionContext): boolean {
+        const required = this.reflector.getAllAndOverride<string[]>(ROLES, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+        if (!required?.length) return true;
+
+        const user = getAuthenticatedUser(context); // 401 if the strategy didn't run
+        if (!required.some((role) => user.roles?.includes(role))) {
+            throw new ForbiddenError('Insufficient privileges');
+        }
+        return true;
+    }
+}
+```
+
+## Authorization that needs the database
+
+Valid, and common: the token proves identity, but who may do what lives in a table another team maintains. Do it through a **query port**, not with SQL in the guard.
+
+### 1. Port and DAO
+
+```ts
+// src/application/ports/queries/user-permissions.query.port.ts
+import { createToken } from '@shared';
+import type { QueryOptions } from './query-options';
+
+export type UserPermissions = {
+    roles: readonly string[];
+    regions: readonly string[];
+};
+
+export interface UserPermissionsQueryPort {
+    findByUsername(username: string, options?: QueryOptions): Promise<UserPermissions>;
+}
+
+export const UserPermissionsQueryPortToken = createToken<UserPermissionsQueryPort>(
+    'UserPermissionsQueryPort',
+);
+```
+
+The DAO goes in `infrastructure/database/queries` and is wired in `database.module.ts` like any other ([Add a query port and DAO](add-query-port-and-dao.md)):
+
+```ts
+ProviderFactory.factory(
+    UserPermissionsQueryPortToken,
+    (db: ConnectionProvider) => new UserPermissionsQueryDao(db),
+    [ConnectionProviderToken],
+),
+```
+
+### 2. The guard
+
+```ts
+// src/interface/http/guards/region.guard.ts
+@Injectable()
+export class RegionGuard implements CanActivate {
+    constructor(
+        @Inject(UserPermissionsQueryPortToken)
+        private readonly permissions: UserPermissionsQueryPort,
+    ) {}
+
+    async canActivate(context: ExecutionContext): Promise<boolean> {
+        // guards run before validation: never pass a raw param to the database
+        const { region } = readGuardInput(context, 'params', z.object({ region: regionSchema }));
+        const user = getAuthenticatedUser(context);
+
+        const { regions } = await this.permissions.findByUsername(user.username, {
+            actor: user.username,
+        });
+
+        if (!regions.includes(region)) {
+            throw new ForbiddenError(`No access to region ${region}`);
+        }
+        return true;
+    }
+}
+```
+
+### Rules for a guard that queries
+
+- **Through a port, always.** The interface layer may not reach into `ConnectionProvider`, a DAO or `oracledb`; it depends on the token. That is what keeps the guard testable with a fake instead of a database.
+- **One lookup per request, not one per check.** Two guards each fetching the same user's permissions doubles the round trips. Fetch roles and regions in one query, and if several guards need it, stash the result on the request (`req.permissions`) so the second guard reuses it.
+- **Cache, and know what the TTL costs you.** A 30–60 second cache turns per-request latency into one query per user per minute; it also means a revoked permission keeps working for that long. Pick the TTL with whoever owns the access rules, and write it down.
+- **Pass `actor`** so the database sees who acted (`CLIENT_IDENTIFIER`) and the lookup appears in the audit trail like any other call.
+- **Never turn an outage into a 403.** If the lookup throws `DatabaseConnectionError`, let it surface — the filter maps it to **503**. Catching it and returning `false`/`ForbiddenError` tells the caller they lack permission when the truth is the database is down, and it hides an incident behind a permission error. Failing closed is right; lying about why is not.
+- **Keep it read-only.** No writes, no transactions, no unit of work in a guard. A guard has no commit boundary, and a request rejected later still leaves whatever it wrote behind.
+- **Log the refusal once**, with the username and what was refused — never the token, the cookie or the SQL.
+- **Watch the pool.** Guards run on every request that reaches the route, including ones that fail validation a moment later; `poolMax` is shared with the real work. If a guard's query is slow, every endpoint behind it is slow.
+
+### When it is the wrong place
+
+| Case                                                                 | Why not a guard                                                                                                            | Do instead                                                              |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| "does this user own ticket 42?"                                      | the guard loads the ticket, the use case loads it again: two queries and two sources of truth that drift                   | check it in the use case, after the repository returns the aggregate    |
+| "only show rows of this user's tenant/region"                        | a gate can't filter a list; it either passes the whole request or refuses it                                               | a bound predicate in the DAO query, from the authenticated user         |
+| "hide that the resource exists from callers who may not see it"      | the guard doesn't know whether it exists without loading it                                                                | use case: 404 for both "missing" and "not yours", deliberately          |
+| anything that writes (audit row, "last seen", consuming a quota)     | guards have no transaction and run on requests that later fail validation                                                  | a use case, or an interceptor after a successful response               |
+| a chain of guards each hitting the database                          | round trips multiply per request and per endpoint                                                                          | one permissions lookup, cached, shared through the request              |
+| business rules dressed as authorization ("only during office hours") | it isn't authentication or authorization; hiding it in a guard puts a rule outside the domain, untested and undiscoverable | domain/use case, returning a domain error that maps to the right status |
+
+Rule of thumb: a guard answers **"may this caller reach this endpoint at all?"** with data about the _caller_. Anything that needs the _resource_ belongs to the use case.
+
+### Testing it
+
+- **Unit**: the guard with a fake port — allowed, refused (`ForbiddenError`), missing user (`UnauthorizedError`), invalid param (400), and the port throwing `DatabaseConnectionError` (it must propagate, not become a 403).
+- **E2E**: one allowed and one refused request, with the port overridden (`.overrideProvider(UserPermissionsQueryPortToken).useValue(fake)`).
 
 ## Checklist
 
@@ -256,4 +374,6 @@ Don't put SQL in a guard: it runs before validation and on every request, includ
 - [ ] `@Public()` list reviewed — that is the surface reachable without credentials
 - [ ] Credential never logged; user shape matches what controllers and the context user expect
 - [ ] Swagger security scheme added and applied to the routes that accept it
+- [ ] Authorization placed by what it needs: caller data → guard, resource data → use case, row filtering → the query
+- [ ] A guard that queries goes through a port, caches, passes `actor`, and lets a database outage surface as 503
 - [ ] Unit test for the guard, e2e for protected and open routes, mutation-checked
