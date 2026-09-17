@@ -146,21 +146,9 @@ SQL rules:
 - Large text: `ORACLE_FETCH_AS_STRING=CLOB` globally, or `fetchInfo` per query, or `lobToString` from `@infrastructure/database/utils` for OUT binds.
 - Optional filter pattern: `(:status IS NULL OR status = :status)`. For heavy tables, build the `WHERE` from fixed fragments instead so indexes are used.
 
-### Stored procedures
+### Procedures, functions and cursors
 
-```ts
-const { outBinds } = await connection.execute<{ status: string; feedback: Lob }>(
-    `BEGIN delete_site(p_site_name => :siteName, o_status => :status, o_feedback => :feedback); END;`,
-    {
-        siteName,
-        status: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 4000 },
-        feedback: { dir: oracledb.BIND_OUT, type: oracledb.CLOB },
-    },
-);
-const feedback = await lobToString(outBinds?.feedback);
-```
-
-Wrap procedures that change data in `transaction()` unless the procedure commits itself.
+Calling procedures with OUT binds, reading `OUT SYS_REFCURSOR` results, scalar and pipelined functions, and mapping `RAISE_APPLICATION_ERROR` codes are covered, with tested code, in [Work with a database you don't own](work-with-a-database-you-dont-own.md#5-reads-cursors-and-functions).
 
 ## 3. Bind the token
 

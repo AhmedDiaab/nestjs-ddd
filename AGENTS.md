@@ -74,18 +74,19 @@ Details: [`docs/architecture/overview.md`](docs/architecture/overview.md).
 
 Follow the matching guide; each has complete, compiled example code:
 
-| Task                               | Guide                                                                                                                                                    |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| New feature end to end             | [`docs/guides/feature-walkthrough.md`](docs/guides/feature-walkthrough.md)                                                                               |
-| Entity / value object              | [`docs/guides/add-value-object-and-entity.md`](docs/guides/add-value-object-and-entity.md)                                                               |
-| Repository (aggregate persistence) | [`docs/guides/add-repository.md`](docs/guides/add-repository.md)                                                                                         |
-| Query port + DAO (reads)           | [`docs/guides/add-query-port-and-dao.md`](docs/guides/add-query-port-and-dao.md)                                                                         |
-| Use case                           | [`docs/guides/add-use-case.md`](docs/guides/add-use-case.md)                                                                                             |
-| Controller / endpoint              | [`docs/guides/add-controller.md`](docs/guides/add-controller.md)                                                                                         |
-| Error → HTTP status                | [`docs/guides/add-error.md`](docs/guides/add-error.md)                                                                                                   |
-| Config variable                    | [`docs/guides/add-config-variable.md`](docs/guides/add-config-variable.md)                                                                               |
-| Database source / dialect          | [`docs/guides/add-database-source.md`](docs/guides/add-database-source.md), [`docs/guides/add-database-dialect.md`](docs/guides/add-database-dialect.md) |
-| Tests                              | [`docs/guides/write-tests.md`](docs/guides/write-tests.md)                                                                                               |
+| Task                                                            | Guide                                                                                                                                                    |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New feature end to end                                          | [`docs/guides/feature-walkthrough.md`](docs/guides/feature-walkthrough.md)                                                                               |
+| Entity / value object                                           | [`docs/guides/add-value-object-and-entity.md`](docs/guides/add-value-object-and-entity.md)                                                               |
+| Repository (aggregate persistence)                              | [`docs/guides/add-repository.md`](docs/guides/add-repository.md)                                                                                         |
+| Query port + DAO (reads)                                        | [`docs/guides/add-query-port-and-dao.md`](docs/guides/add-query-port-and-dao.md)                                                                         |
+| Database owned by another team (procedures, functions, cursors) | [`docs/guides/work-with-a-database-you-dont-own.md`](docs/guides/work-with-a-database-you-dont-own.md)                                                   |
+| Use case                                                        | [`docs/guides/add-use-case.md`](docs/guides/add-use-case.md)                                                                                             |
+| Controller / endpoint                                           | [`docs/guides/add-controller.md`](docs/guides/add-controller.md)                                                                                         |
+| Error → HTTP status                                             | [`docs/guides/add-error.md`](docs/guides/add-error.md)                                                                                                   |
+| Config variable                                                 | [`docs/guides/add-config-variable.md`](docs/guides/add-config-variable.md)                                                                               |
+| Database source / dialect                                       | [`docs/guides/add-database-source.md`](docs/guides/add-database-source.md), [`docs/guides/add-database-dialect.md`](docs/guides/add-database-dialect.md) |
+| Tests                                                           | [`docs/guides/write-tests.md`](docs/guides/write-tests.md)                                                                                               |
 
 Before changing a documented decision, read [`docs/decisions/`](docs/decisions/README.md) and add a new record if you reverse one.
 

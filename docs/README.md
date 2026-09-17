@@ -4,23 +4,24 @@ Start here. Each link is one focused document.
 
 ## I want to…
 
-| Task                                                  | Read                                                                          |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Understand how the template is structured             | [Architecture overview](architecture/overview.md)                             |
-| Build a complete feature end to end                   | [Feature walkthrough](guides/feature-walkthrough.md)                          |
-| Add an entity or value object                         | [Add a value object and entity](guides/add-value-object-and-entity.md)        |
-| Load/save an aggregate from the database              | [Add a repository](guides/add-repository.md)                                  |
-| Add a read-only query (lists, details, reports)       | [Add a query port and DAO](guides/add-query-port-and-dao.md)                  |
-| Add business logic                                    | [Add a use case](guides/add-use-case.md)                                      |
-| Expose an HTTP endpoint                               | [Add a controller](guides/add-controller.md)                                  |
-| Return a specific HTTP status for a failure           | [Add an error](guides/add-error.md)                                           |
-| Add an environment variable                           | [Add a config variable](guides/add-config-variable.md)                        |
-| Connect another database / schema                     | [Add a database source](guides/add-database-source.md)                        |
-| Implement Postgres, MySQL…                            | [Implement a database dialect](guides/add-database-dialect.md)                |
-| Test any of the above                                 | [Write tests](guides/write-tests.md)                                          |
-| Run it in Docker (with a local Oracle)                | [Operations → Docker](architecture/operations.md#docker)                      |
-| Run it as a Windows service or wire a monitoring tool | [Operations](architecture/operations.md)                                      |
-| Work on this repo with an AI agent                    | [`AGENTS.md`](../AGENTS.md) and [Agentic development](agentic-development.md) |
+| Task                                                                        | Read                                                                              |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Understand how the template is structured                                   | [Architecture overview](architecture/overview.md)                                 |
+| Build a complete feature end to end                                         | [Feature walkthrough](guides/feature-walkthrough.md)                              |
+| Add an entity or value object                                               | [Add a value object and entity](guides/add-value-object-and-entity.md)            |
+| Load/save an aggregate from the database                                    | [Add a repository](guides/add-repository.md)                                      |
+| Add a read-only query (lists, details, reports)                             | [Add a query port and DAO](guides/add-query-port-and-dao.md)                      |
+| Use another team's database (procedures, functions, cursors, no migrations) | [Work with a database you don't own](guides/work-with-a-database-you-dont-own.md) |
+| Add business logic                                                          | [Add a use case](guides/add-use-case.md)                                          |
+| Expose an HTTP endpoint                                                     | [Add a controller](guides/add-controller.md)                                      |
+| Return a specific HTTP status for a failure                                 | [Add an error](guides/add-error.md)                                               |
+| Add an environment variable                                                 | [Add a config variable](guides/add-config-variable.md)                            |
+| Connect another database / schema                                           | [Add a database source](guides/add-database-source.md)                            |
+| Implement Postgres, MySQL…                                                  | [Implement a database dialect](guides/add-database-dialect.md)                    |
+| Test any of the above                                                       | [Write tests](guides/write-tests.md)                                              |
+| Run it in Docker (with a local Oracle)                                      | [Operations → Docker](architecture/operations.md#docker)                          |
+| Run it as a Windows service or wire a monitoring tool                       | [Operations](architecture/operations.md)                                          |
+| Work on this repo with an AI agent                                          | [`AGENTS.md`](../AGENTS.md) and [Agentic development](agentic-development.md)     |
 
 ## Reference
 

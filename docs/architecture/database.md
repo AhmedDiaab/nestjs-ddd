@@ -51,6 +51,16 @@ findById(id: string, options?: RepositoryOptions) {
 
 `connection.execute` inside `withConnection` is wrapped to apply the source's fetch defaults (`fetchArraySize`, `prefetchRows`, `maxRows`, `outFormat`); options you pass override them. Queries slower than `slowQueryMs` log `db.query.slow`, including the SQL only when `logSql` is on. Bind values are never logged.
 
+## Where database code goes
+
+| Your service…                                                         | Model and port                                        | Adapter    |
+| --------------------------------------------------------------------- | ----------------------------------------------------- | ---------- |
+| only reads                                                            | read model + query port (`application/ports/queries`) | query DAO  |
+| changes data, rules in your code                                      | aggregate + repository port (`domain/repositories`)   | repository |
+| changes data through another team's procedures that enforce the rules | gateway port (`application/ports/gateways`)           | gateway    |
+
+Table and cursor columns are row types in `infrastructure/database/mappers` in every case. Who owns the schema doesn't change this; when another team does, follow [Work with a database you don't own](../guides/work-with-a-database-you-dont-own.md).
+
 ## Unit of work
 
 `UnitOfWorkPort` (application) is implemented by `DatabaseUnitOfWork` over `ConnectionProvider.runInTransaction('main', work)`. `PoolManager` keeps the transaction's connection in `AsyncLocalStorage` for the duration of `work`; any `withConnection`/`transaction` call for that source in the same async flow reuses it instead of borrowing a connection, and nested units join the outer one. Commit/rollback happens once, in the outer call. Usage: [Add a repository › Multiple aggregates](../guides/add-repository.md#multiple-aggregates-in-one-transaction).

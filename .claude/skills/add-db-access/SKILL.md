@@ -1,17 +1,18 @@
 ---
 name: add-db-access
-description: Add or change database access in this template, either an aggregate repository (domain port + Oracle implementation + mapper) or a read-only query port + DAO, including SQL, stored procedures, pagination, bindings in DatabaseModule and adapter tests. Use for any task touching SQL, oracledb, DAOs, repositories or DatabaseModule.
+description: Add or change database access in this template, either an aggregate repository (domain port + Oracle implementation + mapper), a read-only query port + DAO, or a gateway over another team's procedures/functions/cursors, including SQL, stored procedures, pagination, bindings in DatabaseModule and adapter tests. Use for any task touching SQL, oracledb, DAOs, repositories or DatabaseModule.
 ---
 
 # Add database access
 
 ## Choose the shape
 
-| Need                                                     | Build                                                                                 | Guide                                   |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------- |
-| Load/modify/save a domain aggregate                      | repository interface in `src/domain/repositories` + `Oracle<Name>Repository` + mapper | `docs/guides/add-repository.md`         |
-| Lists, details, reports, procedure outputs for responses | query port in `src/application/ports/queries` + `<Name>QueryDao`                      | `docs/guides/add-query-port-and-dao.md` |
-| A new database/schema                                    | source entry + key in `src/infrastructure/database/sources.ts`                        | `docs/guides/add-database-source.md`    |
+| Need                                                                                | Build                                                                                                                                                | Guide                                              |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Load/modify/save a domain aggregate                                                 | repository interface in `src/domain/repositories` + `Oracle<Name>Repository` + mapper                                                                | `docs/guides/add-repository.md`                    |
+| Lists, details, reports, procedure outputs for responses                            | query port in `src/application/ports/queries` + `<Name>QueryDao`                                                                                     | `docs/guides/add-query-port-and-dao.md`            |
+| Actions through another team's procedures (their rules), cursors/functions they own | gateway port in `src/application/ports/gateways` + `<Name>Gateway` in `infrastructure/database/gateways`; query port + DAO for cursor/function reads | `docs/guides/work-with-a-database-you-dont-own.md` |
+| A new database/schema                                                               | source entry + key in `src/infrastructure/database/sources.ts`                                                                                       | `docs/guides/add-database-source.md`               |
 
 Never create ports under `src/infrastructure/**` for use cases to import.
 

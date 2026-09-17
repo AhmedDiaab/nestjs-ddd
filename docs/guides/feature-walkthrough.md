@@ -40,7 +40,7 @@ test/unit/**, test/e2e/tickets.e2e-spec.ts                   8. tests
 
 ## Steps
 
-0. **Table.** Create the database objects.
+0. **Table.** Create the database objects. If another team owns the schema, skip this: get the definitions and contract from them and follow [Work with a database you don't own](work-with-a-database-you-dont-own.md).
     ```sql
     CREATE TABLE tickets (
         id          VARCHAR2(36)  PRIMARY KEY,
