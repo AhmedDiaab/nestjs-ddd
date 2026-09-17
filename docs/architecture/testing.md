@@ -7,6 +7,7 @@
 | `pnpm test`                         | unit tests (`test/unit/**/*.spec.ts`)                                                                                          |
 | `pnpm test:watch` / `pnpm test:cov` | watch / coverage (`coverage/`)                                                                                                 |
 | `pnpm test:e2e`                     | e2e tests (`test/e2e/**/*.e2e-spec.ts`); boots `AppModule` over HTTP                                                           |
+| `pnpm test:oracle`                  | live Oracle tests (`test/integration/**/*.int-spec.ts`); skipped unless `ORACLE_IT_PASSWORD` is set, not part of `verify`      |
 | `pnpm typecheck`                    | `tsc --noEmit` over `src` and `test`. **Jest only transpiles**, so type errors (and `@ts-expect-error` checks) are caught here |
 | `pnpm verify`                       | everything a change must pass: typecheck, lint, lint:test, circular, unit, e2e, build                                          |
 
@@ -16,6 +17,7 @@
 test/
 ├── unit/          # mirrors src/: unit/domain, unit/application, unit/infrastructure, unit/interface, unit/layers
 ├── e2e/           # HTTP tests
+├── integration/   # live database tests (pnpm test:oracle)
 ├── fixtures/      # builders for config objects etc. (e.g. fixtures/database/oracle-source.ts)
 └── fakes/         # in-memory port implementations (added per feature)
 ```
@@ -41,6 +43,24 @@ Path aliases (`@domain`, `@src`, …) work in tests through `jest.config.ts` / `
 - `env-config.adapter.spec.ts`: defaults for unset env, list/bool parsing, **no secrets in errors**.
 - `provider.factory.spec.ts`: typed-token binding checks (`@ts-expect-error`, verified by `pnpm typecheck`).
 - `app.e2e-spec.ts`: envelope, request id, health, 404, 401 without a database.
+- `oracle.client.int-spec.ts` (live): `CLIENT_IDENTIFIER` visible inside the call and `NULL` on the next borrow of the **same session** (pool of 1), also after the callback throws; byte truncation; commit/rollback; `ORA-00001` → `ConflictError`.
+
+## Live Oracle tests
+
+Run against any Oracle the user can create tables in, e.g. the compose `oracle` service:
+
+```bash
+docker compose --env-file .env.docker up -d oracle
+ORACLE_IT_PASSWORD=<app user password> pnpm test:oracle
+```
+
+| Env                        | Default                   |
+| -------------------------- | ------------------------- |
+| `ORACLE_IT_PASSWORD`       | unset → suite skipped     |
+| `ORACLE_IT_USER`           | `app`                     |
+| `ORACLE_IT_CONNECT_STRING` | `localhost:1521/FREEPDB1` |
+
+The suite creates and drops its own `IT_ORACLE_CLIENT_<timestamp>` table. Run it after changing `OracleClient`, `oracle-pool.options.ts` or the error mapper.
 
 ## E2E environment
 

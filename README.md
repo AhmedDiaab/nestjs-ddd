@@ -48,6 +48,6 @@ docker compose --env-file .env.docker up --build
 | `pnpm build` / `start:prod`                                | production build / run (`NODE_ENV` from environment)                                          |
 | `pnpm verify`                                              | full quality gate                                                                             |
 | `pnpm typecheck` / `lint` / `lint:test` / `check:circular` | individual checks                                                                             |
-| `pnpm test` / `test:e2e` / `test:cov`                      | tests                                                                                         |
+| `pnpm test` / `test:e2e` / `test:cov` / `test:oracle`      | tests                                                                                         |
 | `docker compose --env-file .env.docker up --build`         | API + Oracle locally ([Operations](docs/architecture/operations.md#docker))                   |
 | `.\start-service.ps1` / `.\stop-service.ps1`               | Windows service via NSSM ([Operations](docs/architecture/operations.md#windows-service-nssm)) |
