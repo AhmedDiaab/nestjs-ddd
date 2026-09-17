@@ -1,277 +1,208 @@
 # Nestjs Domain Driven Design
 
-Nestjs Domain Driven Design is a NestJS 11 starter template for building domain-driven HTTP services. It provides a consistent façade, end-to-end observability, runtime safeguards, and opinionated response envelopes while keeping the core domain isolated behind ports and adapters so it can integrate with any downstream platform.
+NestJS 11 starter template for layered / DDD HTTP services: consistent response envelope, structured logging, fail-fast config, multi-source database layer (Oracle implemented), JWT verification, and enforced layer boundaries.
 
 ## 1. Highlights
 
-- Request-scoped structured logging with `nestjs-pino`, correlation IDs, and optional daily file rotation.
-- Fail-fast configuration loader built on `dotenv-flow` plus Zod validation.
-- Global HTTP formatting: all responses use a `{ success, data|error, meta }` envelope.
-- Zod-powered validation for request bodies, params, query strings, and headers.
-- Domain-driven layering (Interface → Application → Domain) reinforced by TypeScript path aliases.
-- Developer conveniences: Nest REPL entry point, linting, formatting, and Jest unit/E2E suites.
+- Layered architecture (Interface → Application → Domain, Infrastructure behind ports), **enforced by ESLint** and checked for cycles with `madge`.
+- Multi-source database layer configured by JSON: Oracle (node-oracledb, thin or thick) fully implemented; postgres/mysql/mariadb/mssql/sqlite placeholders ready to implement.
+- Per-source Oracle pool/driver tuning, boot ping with retries, readiness probe, graceful pool drain on shutdown.
+- **Context user per query**: the end user is set as Oracle `CLIENT_IDENTIFIER` for one call and cleared before the connection returns to the pool.
+- Request-correlated structured logging (`nestjs-pino`), daily file rotation, secrets redacted, 5xx always logged.
+- Fail-fast config (`dotenv-flow` + Zod); errors never print values.
+- Response envelope `{ success, data | error, meta }`; `Result` errors mapped to real HTTP status.
+- Zod request validation (Express 5 safe), Swagger (off in production by default), helmet, CORS allow-list, rate limiting.
 
 ## 2. Tech Stack
 
-- Node.js ≥ 22.18 (`.nvmrc`)
-- NestJS 11 with Express adapter
-- TypeScript 5.7 (NodeNext modules)
-- `nestjs-pino`, `pino`, `pino-roll`, `pino-pretty`
-- `dotenv-flow` for layered env files
-- `zod` for runtime validation
-- pnpm 10 workspace tooling
+Node.js ≥ 22.18 · NestJS 11 (Express 5) · TypeScript 5 · `oracledb` 6 · `nestjs-pino`/`pino-roll` · `zod` 4 · `passport-jwt` · `@nestjs/swagger` · `@nestjs/throttler` · `helmet` · Jest 30 · pnpm 10
 
 ## 3. Repository Layout
 
 ```text
-.
-├── .env.example
-├── .env.development
-├── docs/diagrams.drawio
-├── package.json
-├── pnpm-lock.yaml
-├── pnpm-workspace.yaml
-├── src/
-│   ├── app.controller.ts
-│   ├── app.controller.spec.ts
-│   ├── app.module.ts
-│   ├── app.service.ts
-│   ├── application/
-│   ├── common/
-│   ├── domain/
-│   ├── infrastructure/
-│   ├── interface/
-│   ├── main.ts
-│   ├── repl.ts
-│   └── shared/
-├── test/
-│   ├── app.e2e-spec.ts
-│   └── jest-e2e.json
-└── tsconfig*.json
+src/
+├── main.ts / app.module.ts        # bootstrap + composition root
+├── domain/                        # pure business rules (no Nest, no infra)
+│   ├── base/                      # Entity, ValueObject, AggregateRoot
+│   ├── errors/                    # DomainError, ValidationError, AggregateNotFoundError
+│   └── auth/                      # JWTPayload
+├── application/                   # use cases + ports (interfaces + DI tokens)
+│   ├── ports/                     # ConfigPort, LoggerPort, repository ports, tokens.ts
+│   ├── use-cases/
+│   └── errors/                    # AppError subclasses (→ HTTP status via problem kind)
+├── infrastructure/                # adapters implementing ports
+│   ├── config/                    # env → Zod schemas → ConfigPort
+│   ├── logging/                   # pino
+│   ├── auth/                      # JWT strategy
+│   └── database/
+│       ├── clients/               # OracleClient, NotImplementedClient, oracle/ helpers
+│       ├── connection/            # PoolManager, ConnectionProvider (boot ping)
+│       ├── dao/                   # port implementations (example: DatabaseInfoDao)
+│       ├── errors/ utils/ types/
+│       └── sources.ts             # source keys used by DAOs
+├── interface/http/                # controllers, guards, interceptors, filter, swagger
+├── common/                        # framework helpers (ProviderFactory, UseCase base, utils)
+└── shared/                        # framework-free primitives (Result, Problem, envelope, pagination)
+test/
+├── unit/                          # mirrors src/
+├── e2e/                           # boots AppModule (no DB)
+└── fixtures/
 ```
 
-Generated directories such as `dist/` (build output) and `logs/` (runtime logs) are excluded from version control.
+## 4. Architecture Rules
 
-## 4. Architecture & Layering
+| Layer | May import | Must not import |
+| --- | --- | --- |
+| `domain` | `@shared`, itself | `@application`, `@infrastructure`, `@interface`, `@nestjs/*` |
+| `application` | `@domain`, `@common`, `@shared`, `@nestjs/common` (DI) | `@infrastructure`, `@interface`, drivers (`oracledb`…), `express` |
+| `infrastructure` | `@application/ports`, `@domain`, `@common`, `@shared` | `@interface` |
+| `interface` | `@application`, `@domain`, `@shared`, infra **tokens/contracts** only | adapters' internals |
 
-- **Interface (`src/interface`)** exposes application use cases through HTTP controllers, interceptors, and filters. It never reaches into infrastructure implementations directly.
-- **Application (`src/application`)** hosts use cases, ports (interfaces), and cross-cutting contracts. It coordinates domain logic and emits `Result` objects or typed errors.
-- **Domain (`src/domain`)** contains pure business rules and domain-specific errors. No NestJS or infrastructure references appear here.
-- **Infrastructure (`src/infrastructure`)** implements application ports (config, logging, future persistence) and registers adapters via DI tokens.
-- **Shared (`src/shared`)** provides framework-agnostic primitives (Result, Problem, pagination, helpers).
-- **Common (`src/common`)** collects light framework utilities such as DI factories, base use-case classes, and stack-trace formatting helpers.
+- DI tokens live next to ports in `application/ports/tokens.ts`.
+- `AppModule` is the only place that imports all layer modules. `ApplicationModule` and `InterfaceModule` never import `InfrastructureModule` (infra modules are `@Global`).
+- Rules are enforced with `no-restricted-imports` in `eslint.config.mjs`; cycles with `pnpm check:circular`.
 
-Dependencies always point inward (Interface → Application → Domain). Infrastructure is wired through DI tokens so that core layers remain testable and framework-agnostic.
+### Use-case convention
 
-## 5. Source Modules
+- Expected business failure → `return this.err(new SomeAppError(...))`. The response formatter rethrows it and the exception filter maps its problem `kind` to the HTTP status (404, 409, 422…).
+- A non-`AppError` value in `Result.err` (e.g. `'database_error'`) → **422** with `code`.
+- Unexpected failure → `throw`.
+- Map DB rows to types **in the DAO** (prefer `outFormat: OBJECT` + named columns), never positional indexes in domain code.
 
-### 5.1 Entry & Sample Components
+### Guards
 
-| File                         | Purpose                                                                                                                |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `src/main.ts`                | Bootstraps `AppModule`, hooks `nestjs-pino`, applies timeouts/body limits/CORS/versioning, and starts the HTTP server. |
-| `src/app.module.ts`          | Root Nest module importing infrastructure and interface modules plus the sample controller/service.                    |
-| `src/app.service.ts`         | Placeholder service returning `"Hello World!"`.                                                                        |
-| `src/app.controller.ts`      | Sample controller exposing `GET /`.                                                                                    |
-| `src/app.controller.spec.ts` | Unit test for the sample controller.                                                                                   |
-| `src/repl.ts`                | Launches the Nest REPL with history support.                                                                           |
+Guards run **before** pipes/interceptors, so request data read in a guard is unvalidated. Use `readGuardInput(context, 'params', schema)` and throw `ForbiddenError`/`UnauthorizedError` rather than returning `false`.
 
-### 5.2 Interface Layer (`src/interface`)
+### Validation
 
-| File                                                         | Description                                                                                                 |
-| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `interface.module.ts`                                        | Registers global HTTP concerns (interceptors, filters) and the fallback controller.                         |
-| `http/common/fallback/fallback.controller.ts`                | Throws an application `NotFoundError` for any unmatched route.                                              |
-| `http/common/interceptors/response-formatter.interceptor.ts` | Wraps handler output (including `Result` objects) into a `{ success, data error, meta }`                    |
-|                                                                envelope unless explicitly disabled                                                                         |
-| `http/interceptors/zod-http.interceptor.ts`                  | Reads `@UseZodHttp` metadata and validates body/query/params/headers before the handler runs.               |
-| `http/decorators/zod-http.decorator.ts`                      | Attaches Zod schemas to controllers or handlers.                                                            |
-| `http/pipes/zod-validation.pipe.ts`                          | Standalone Zod validation pipe for ad-hoc use.                                                              |
-| `http/schemas/pagination.schema.ts`                          | Common Zod schemas for offset/cursor pagination queries.                                                    |
-| `http/error-presenter.ts`                                    | Converts `PresentableError` instances into Problem payloads with HTTP status codes.                         |
-| `http/global-exception.filter.ts`                            | Catch-all filter that normalizes errors, merges metadata, and logs failures with stack traces when enabled. |
+`@UseZodHttp({ body, query, params, headers })` validates and stores results on `req.validated`; read them with `@Validated('query')`. `body`/`params` are also replaced in place. `req.query` is **not** assigned: it is a read-only getter in Express 5.
 
-### 5.3 Application Layer (`src/application`)
+## 5. Database Layer
 
-| File                                | Description                                                                         |
-| ----------------------------------- | ----------------------------------------------------------------------------------- |
-| `ports/config.port.ts`              | Abstract configuration interface (dot-path getter, aggregation, environment check). |
-| `ports/logger.port.ts`              | Structured logging contract shared across layers.                                   |
-| `contracts/paginated-repository.ts` | Offset and cursor pagination repository contracts.                                  |
-| `errors/app-error.ts`               | Base class for application errors implementing `PresentableError`.                  |
-| `errors/bad-request-error.ts`       | HTTP 400-style application error.                                                   |
-| `errors/not-found-error.ts`         | HTTP 404-style application error.                                                   |
-| `errors/infrastructure-error.ts`    | Wraps downstream failures, mapping to service unavailability.                       |
-| `errors/unexpected-error.ts`        | Generic internal error for unhandled cases.                                         |
-| `shared/logging.ts`                 | Central log metadata typings to keep log structure consistent.                      |
+```ts
+// DAO (infrastructure) — depends on the ConnectionProvider contract
+this.db.withConnection<Row[], Connection>(
+    DatabaseSources.main,
+    async (conn) => (await conn.execute<Row>(sql, binds, { outFormat: oracledb.OUT_FORMAT_OBJECT })).rows ?? [],
+    { contextUser: username, tag: 'orders.findByUser', callTimeoutMs: 5000 },
+);
 
-### 5.4 Domain Layer (`src/domain`)
+this.db.transaction(DatabaseSources.main, async (conn) => { /* commit on success, rollback on throw */ }, { contextUser });
+```
 
-| File                         | Description                                                       |
-| ---------------------------- | ----------------------------------------------------------------- |
-| `errors/domain-error.ts`     | Base class for domain errors, defaulting to validation semantics. |
-| `errors/not-found-error.ts`  | Domain-level “aggregate not found” error.                         |
-| `errors/validation-error.ts` | Domain validation error with field-level details.                 |
+### Context user (Oracle `CLIENT_IDENTIFIER`)
 
-### 5.5 Infrastructure Layer (`src/infrastructure`)
+Per call, when `contextUser` is passed:
 
-| File                           | Description                                                                                                                      |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| `infrastructure.module.ts`     | Aggregates config and logging modules for import into `AppModule`.                                                               |
-| `config/config.module.ts`      | Global provider binding `ConfigPortToken` to the environment adapter.                                                            |
-| `config/config.token.ts`       | Symbol DI token for configuration access.                                                                                        |
-| `config/env-config.adapter.ts` | Loads `.env*` files via `dotenv-flow`, validates with Zod, and exposes `ConfigPort`. Exits the process on invalid configuration. |
-| `config/schemas/*.ts`          | Zod schemas for app/logging/http namespaces, providing sane defaults and type safety.                                            |
-| `logging/pino.module.ts`       | Configures `nestjs-pino` with options derived from `ConfigPort`, exposing `LoggerPort`.                                          |
-| `logging/pino.adapter.ts`      | Request-scoped adapter implementing `LoggerPort` using `PinoLogger`.                                                             |
-| `logging/pino.options.ts`      | Generates Pino transports, correlation IDs, log redaction, and custom messages.                                                  |
-| `logging/logging.token.ts`     | Symbol DI token for logger access.                                                                                               |
+1. `connection.clientId = user`: sent with the first round trip (no extra `DBMS_SESSION` call).
+2. Your queries run. The database sees it in `SYS_CONTEXT('USERENV','CLIENT_IDENTIFIER')`, `V$SESSION.CLIENT_IDENTIFIER`, and audit/VPD policies.
+3. Before release: `clientId = ''` + `ping()` flushes the clear. If that fails, the connection is **dropped** from the pool, so an identity never leaks to the next borrower.
 
-### 5.6 Common Utilities (`src/common`)
+Per-source switches: `contextUser.enabled` (default `true`), `contextUser.required` (reject calls without a user), `contextUser.maxLength` (bytes, ≤ 64). `ConnectionOptions.username` is kept as a deprecated alias.
 
-| File                               | Description                                                       |
-| ---------------------------------- | ----------------------------------------------------------------- |
-| `base/use-case.base.ts`            | Async use-case base class returning `Result` objects.             |
-| `contracts/use-case.ts`            | Use-case interface aliases and DI token helper.                   |
-| `factories/provider.factory.ts`    | Factory to bind tokens to classes without repetitive boilerplate. |
-| `type-utils.ts`                    | Framework-aware DI typing helpers.                                |
-| `utils/format-stack-trace.util.ts` | Trims stack traces for cleaner logging.                           |
+### Errors
 
-### 5.7 Shared Utilities (`src/shared`)
+Driver errors are mapped once in `OracleClient`: `ORA-00001` → `ConflictError` (409); pool/network (`NJS-040`, `NJS-500`, `ORA-03113`, `ORA-12170`, …) → `DatabaseConnectionError` (503); everything else → `DatabaseExecutionError` (500) with the ORA code kept for logs. Clients never see ORA codes or messages.
 
-| File                   | Description                                                                            |
-| ---------------------- | -------------------------------------------------------------------------------------- |
-| `result.ts`            | Lightweight `Result` implementation with helpers (`ok`, `err`, `map`, `combine`).      |
-| `helpers.ts`           | Type guards for objects, envelopes, and `Result`-like shapes.                          |
-| `problem.ts`           | Problem domain model, `PresentableError` contract, and type guards.                    |
-| `response-envelope.ts` | Response envelope types, metadata shape, pagination alias, and `x-skip-format` header. |
-| `pagination/types.ts`  | Core pagination request/response types.                                                |
-| `pagination/cursor.ts` | Base64url helpers for cursor encoding/decoding.                                        |
-| `type-utils.ts`        | General TypeScript helper types (`Awaitable`, `Constructor`, `Rec`).                   |
+### Adding a dialect
 
-### 5.8 Testing (`/test`)
+Implement `DatabaseClient` (`withConnection`, `transaction`, `ping`, `close`, `stats`, `implemented = true`) and replace the placeholder branch in `PoolManager.init`. Placeholders are skipped by boot pings unless listed in `DATABASE_PING_REQUIRED_SOURCES` (then boot fails).
 
-| File                   | Description                                                               |
-| ---------------------- | ------------------------------------------------------------------------- |
-| `test/app.e2e-spec.ts` | Supertest-based E2E test hitting `GET /`.                                 |
-| `test/jest-e2e.json`   | Jest configuration for the E2E suite.                                     |
-| `package.json`         | Configures Jest for unit tests (`rootDir: src`) and exposes test scripts. |
+### Health
+
+- `GET /health`: liveness.
+- `GET /health/ready`: pings every implemented source. Returns 503 when one fails. Error text is hidden in production.
 
 ## 6. Cross-cutting Behaviour
 
-### 6.1 Bootstrapping Flow
+- **Bootstrap** (`main.ts`): buffered pino logger → shutdown hooks → helmet, cookies → server timeouts → body parsers with limits → CORS allow-list → URI versioning (`v1` default; `/health` version-neutral) → Swagger (if enabled). Invalid config prints the failing paths (no values) and exits 1.
+- **Logging**: `LoggerPort` adapter is a singleton; nestjs-pino binds the request logger via AsyncLocalStorage, so logs keep the request id without request-scoped DI. 5xx are always logged; stacks only with `SHOW_STACK_TRACES=true`. Authorization/cookie headers are removed from logs.
+- **Errors**: `GlobalExceptionFilter` handles `HttpException`, body-parser errors (413/400), and `AppError`/`DomainError` via `ErrorPresenter`. Internal `details` are never returned.
+- **Security**: CORS disabled unless `CORS_ORIGINS` is set (cookies + reflected origins would allow cross-site calls); helmet headers; global throttling (`THROTTLE_*`, `/health` exempt); JWT from cookie or `Authorization: Bearer`, with algorithm/issuer/audience checks. For cookie auth on state-changing routes, also use `SameSite=strict` cookies or add an origin/CSRF check.
 
-1. `src/main.ts` creates the Nest application with buffered logs.
-2. `ConfigPort` (provided by `EnvConfigAdapter`) supplies HTTP timeouts, body limits, and port.
-3. Express middlewares apply JSON/urlencoded limits; CORS is enabled with permissive defaults.
-4. URI versioning defaults to `v1`.
-5. Once listening, the `nestjs-pino` logger emits a startup message with environment context.
+## 7. Configuration
 
-### 6.2 Configuration Pipeline
+See `.env.example` for every variable. Unset or blank values use the defaults below.
 
-- `.env*` files are loaded via `dotenv-flow` as soon as the config adapter is instantiated.
-- `hydrate()` in `env-config.adapter.ts` maps raw environment variables into namespaced objects.
-- Composite Zod schemas validate the shape; failures log sanitized error details and exit.
-- `ConfigPort.get('namespace.key')` provides dot-path access for strongly typed lookups.
-- `ConfigPort.isDevelopment()` toggles development-only logging transports.
+### 7.1 Application, logging, HTTP, JWT
 
-### 6.3 Logging
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `NODE_ENV` | _required_ | `development` \| `test` \| `staging` \| `production` |
+| `LOG_LEVEL` | `info` | |
+| `SHOW_STACK_TRACES` | `false` | |
+| `REQUEST_ID_HEADER` | `x-request-id` | |
+| `LOGGING_TO_FILE` / `LOGGING_DIR` / `LOGGING_FILE_NAME` | `true` / `logs` / `app.log` | daily rotation |
+| `LOGGING_FILES_LIMIT` / `LOGGING_MAX_SIZE` | `14` / `10m` | |
+| `LOGGING_PRETTY` | dev only | falls back to JSON if `pino-pretty` isn't installed |
+| `PORT` | `3000` | |
+| `CORS_ORIGINS` | _(empty = disabled)_ | comma-separated |
+| `SERVER_TIMEOUT` / `HEADERS_TIMEOUT` / `KEEP_ALIVE_TIMEOUT` | `120000` / `121000` / `61000` | ms |
+| `JSON_BODY_LIMIT` / `URLENCODED_BODY_LIMIT` | `1mb` | |
+| `SWAGGER_ENABLED` | off in production | served at `/docs` |
+| `THROTTLE_TTL_MS` / `THROTTLE_LIMIT` | `60000` / `100` | `0` disables |
+| `TRUST_PROXY` | `false` | |
+| `JWT_SECRET` | _required_ | ≥ 32 chars |
+| `JWT_ALGORITHMS` / `JWT_ISSUER` / `JWT_AUDIENCE` / `JWT_COOKIE_NAME` | `HS256` / – / – / `jwt` | |
 
-- `nestjs-pino` is configured in `pino.module.ts` using `generatePinoOptions`.
-- `genReqId` ensures every request carries a correlation ID (header + `req.id`).
-- Sensitive headers (`Authorization`, cookies) are redacted before log emission.
-- Daily file rotation is handled by `pino-roll` when `logging.toFile` is true.
-- Pretty logging is enabled automatically in development environments.
-- `LoggerPort` abstracts the logger, allowing application/domain code to depend on interfaces rather than concrete logging libraries.
+### 7.2 Database
 
-### 6.4 HTTP Pipeline & Error Handling
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `DATABASE_CONFIG_JSON` | _(unset = no DB)_ | JSON array of sources (wrap in single quotes) |
+| `DATABASE_PING_ON_BOOT` | `true` | |
+| `DATABASE_PING_TIMEOUT_MS` / `_MAX_RETRIES` / `_CONCURRENCY` / `_JITTER_MS` | `3000` / `2` / `3` / `250` | |
+| `DATABASE_PING_REQUIRED_SOURCES` | all implemented | comma-separated keys; others only warn |
+| `DATABASE_USE_DBLINK` | `false` | |
+| `ORACLE_THICK_MODE` | `false` | thin needs no Instant Client |
+| `ORACLE_CLIENT_LIB_DIR` / `ORACLE_CLIENT_CONFIG_DIR` | – | thick mode |
+| `ORACLE_FETCH_AS_STRING` / `ORACLE_FETCH_AS_BUFFER` | – | e.g. `CLOB,NUMBER` / `BLOB` |
 
-1. Requests pass through `nestjs-pino` for tracing.
-2. `ZodHttpInterceptor` validates request segments when a route uses `@UseZodHttp`.
-3. Handlers may return plain values, `Result` objects, or pre-built envelopes.
-4. `ResponseFormatterInterceptor` wraps responses in the standard envelope, merging metadata when handlers provide their own.
-5. Exceptions bubble into `GlobalExceptionFilter`, which:
-    - Preserves `HttpException` status codes and adapts bodies to the envelope shape.
-    - Delegates to `ErrorPresenter` for domain/application errors.
-    - Logs warnings/errors with optional sanitized stack traces.
-6. `FallbackController` throws a typed `NotFoundError` for any route miss, guaranteeing consistent 404 payloads.
+**Oracle source fields** (inside `DATABASE_CONFIG_JSON`):
 
-### 6.5 Validation
+| Group | Field (default) |
+| --- | --- |
+| Target / auth | `key`, `connectionUrl` (`oracle://user:pass@host:1521/service`) **or** `connectString` + `user` + `password`/`passwordEnv`; `externalAuth` (false), `edition`, `configDir`, `walletLocation`, `walletPassword`/`walletPasswordEnv`, `sslServerDNMatch`, `httpsProxy`, `httpsProxyPort` |
+| Pool | `poolMin` (2), `poolMax` (10), `poolIncrement` (1), `poolTimeoutSec` (60), `poolMaxLifetimeSessionSec` (0), `poolPingIntervalSec` (60), `poolPingTimeoutMs` (5000), `queueMax` (500), `queueTimeoutMs` (60000), `stmtCacheSize` (30), `enableStatistics` (false), `homogeneous` (true), `drainTimeSec` (10) |
+| Network | `connectTimeoutSec` (20), `expireTimeMin` (0), `retryCount` (0), `retryDelaySec` (1), `callTimeoutMs` (0 = none) |
+| Fetch | `fetchArraySize` (100), `prefetchRows` (2), `maxRows` (0), `outFormat` (`array` \| `object`) |
+| Behaviour | `slowQueryMs` (1000), `logSql` (false; binds never logged), `healthQuery` (`SELECT 1 FROM DUAL`), `contextUser` (`{ enabled: true, required: false, maxLength: 64 }`) |
 
-- Zod schemas enforce both configuration (startup) and request-time validation.
-- `ZodValidationPipe` offers a portable alternative when decorators are not viable.
-- Pagination schemas standardize offsets/cursors, including strict `orderBy` formats.
+Example:
 
-### 6.6 Result Handling & Pagination
-
-- `Result` helpers (`src/shared/result.ts`) allow use cases to avoid throwing and still communicate success/failure clearly.
-- `ResponseFormatterInterceptor` recognizes these `Result` objects, automatically turning them into success/error envelopes.
-- Cursor helpers (`src/shared/pagination/cursor.ts`) encapsulate opaque tokens, ensuring consistent encoding across interfaces.
-
-## 7. Configuration & Environment Variables
-
-| Variable              | Default                                                             | Description                                                         |
-| --------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `NODE_ENV`            | _(required)_ (`development` \| `test` \| `staging` \| `production`) | Drives environment-specific behaviour (`ConfigPort.isDevelopment`). |
-| `LOG_LEVEL`           | `info`                                                              | Pino log level (`debug`, `info`, `warn`, `error`).                  |
-| `SHOW_STACK_TRACES`   | `false`                                                             | Logs/returns stack traces when true.                                |
-| `REQUEST_ID_HEADER`   | `x-request-id`                                                      | Header used for correlation IDs.                                    |
-| `LOGGING_TO_FILE`     | `true`                                                              | Enables rolling file logging through `pino-roll`.                   |
-| `LOGGING_DIR`         | `logs`                                                              | Target directory for log files.                                     |
-| `LOGGING_FILE_NAME`   | `app.log`                                                           | Log file name (rolled daily).                                       |
-| `LOGGING_FILES_LIMIT` | `14`                                                                | Retained rolled files (plus the current file).                      |
-| `LOGGING_MAX_SIZE`    | `10M`                                                               | Max size per log file before rotation.                              |
-| `PORT`                | `3000`                                                              | HTTP listen port.                                                   |
-| `CORS_ORIGIN`         | _(unset)_                                                           | Comma-separated allowed origins (see note about schema mismatch).   |
-| `SERVER_TIMEOUT`      | `120000`                                                            | HTTP server timeout (ms).                                           |
-| `HEADERS_TIMEOUT`     | `121000`                                                            | Headers timeout (ms).                                               |
-| `KEEP_ALIVE_TIMEOUT`  | `61000`                                                             | Keep-alive timeout (ms).                                            |
-| `JSON_BODY_LIMIT`     | `1mb`                                                               | Express JSON body limit.                                            |
-| `URL_ENCODED_LIMIT`   | `1mb`                                                               | Express urlencoded body limit.                                      |
-
-`.env.example` documents the variables, and `.env.development` offers sample values for local use. Update the sample to keep schema expectations in sync (see Additional Notes).
+```dotenv
+DATABASE_CONFIG_JSON='[
+  {"key":"main","dialect":"oracle","connectString":"db:1521/APP","user":"app","passwordEnv":"MAIN_DB_PASSWORD",
+   "poolMin":4,"poolMax":20,"queueTimeoutMs":10000,"callTimeoutMs":30000,"expireTimeMin":5,
+   "contextUser":{"required":true}},
+  {"key":"reports","dialect":"postgres","connectionUrl":"postgres://u:p@pg:5432/reports"}
+]'
+MAIN_DB_PASSWORD=...
+DATABASE_PING_REQUIRED_SOURCES=main
+```
 
 ## 8. Developer Workflow
 
-### 8.1 Installation & Build
-
 ```bash
 pnpm install
-pnpm build       # produces dist/
+pnpm start:dev        # watch, NODE_ENV=development (.env.development)
+pnpm build && pnpm start:prod   # set NODE_ENV in the environment for prod
+pnpm start:repl
+
+pnpm lint && pnpm lint:test
+pnpm check:circular
+pnpm test             # unit (test/unit)
+pnpm test:cov
+pnpm test:e2e         # boots AppModule without a database
 ```
 
-### 8.2 Local Execution
+If you add non-TS runtime files (e.g. mail templates), list them in `nest-cli.json` → `compilerOptions.assets` so they are copied to `dist`.
 
-```bash
-pnpm start        # standard Nest start
-pnpm start:dev    # watch mode with NODE_ENV=development
-pnpm start:debug  # watch mode + Node inspector
-pnpm start:prod   # runs dist/main.js (build first)
-pnpm start:repl   # launches Nest REPL (src/repl.ts)
-```
+## 9. Extending
 
-### 8.3 Quality Gates
-
-```bash
-pnpm lint           # ESLint over src/apps/libs/test
-pnpm lint:fix       # ESLint with --fix
-pnpm format         # Prettier write over src/** and test/**
-pnpm format:check   # Prettier check mode
-pnpm test           # Jest unit tests
-pnpm test:watch     # Jest watch mode
-pnpm test:cov       # Coverage report
-pnpm test:e2e       # E2E suite (test/jest-e2e.json)
-```
-
-## 9. Extensibility Guidelines
-
-1. **Model the domain** — create entities/value objects/errors under `src/domain`.
-2. **Define ports & use cases** — add interfaces and use-case orchestrators under `src/application`, returning `Result` objects where appropriate.
-3. **Expose via interface** — build controllers in `src/interface/http`, attach validation with `@UseZodHttp`, and rely on interceptors for envelopes.
-4. **Implement adapters** — satisfy ports inside `src/infrastructure` and register them with `ProviderFactory`.
-5. **Test** — write unit tests for domain/application logic and add E2E coverage under `test/` for new HTTP endpoints.
-
-## 10. Additional Notes & Observations
-
-- `docs/diagrams.drawio` can store architecture diagrams referenced in onboarding material.
-- Logs default to the `logs/` directory; ensure deployment environments grant write permissions or toggle `LOGGING_TO_FILE`.
+1. **Domain**: entities/value objects under `src/domain` (validate in static `create`, return `Result`).
+2. **Port**: interface + token in `src/application/ports`.
+3. **Use case**: `src/application/use-cases`, register in `ApplicationModule`.
+4. **Adapter**: DAO in `src/infrastructure/database/dao`, bind the token in `DatabaseModule` with `ProviderFactory.factory(Token, (db) => new Dao(db), [ConnectionProviderToken])`.
+5. **Interface**: controller + `@UseZodHttp`, pass `user.username` down as `contextUser`.
+6. **Test**: unit under `test/unit/<layer>/…`, HTTP flows in `test/e2e`.
