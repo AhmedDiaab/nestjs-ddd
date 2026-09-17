@@ -1,4 +1,5 @@
 import type { ConfigPort, LoggerPort, RequestContextPort } from '@application/ports';
+import { formatTraceparent, newSpanId } from '@infrastructure/context';
 import { delay } from '@infrastructure/database/utils';
 import { CircuitBreaker } from './circuit-breaker';
 import type { HttpClient, HttpRequest, HttpResponse } from './contracts';
@@ -151,8 +152,19 @@ export class FetchHttpClient implements HttpClient {
         }
 
         // one trace across both services; the header name is the one this service accepts
-        const requestId = this.context.get()?.requestId;
-        if (requestId) headers[this.config.get('logging.requestIdHeader')] ??= requestId;
+        const context = this.context.get();
+        if (context?.requestId) {
+            headers[this.config.get('logging.requestIdHeader')] ??= context.requestId;
+        }
+
+        // W3C trace context: same trace, a new span id for this outgoing call
+        if (context?.traceId) {
+            headers.traceparent ??= formatTraceparent({
+                traceId: context.traceId,
+                spanId: newSpanId(),
+                sampled: context.sampled ?? true,
+            });
+        }
 
         return headers;
     }

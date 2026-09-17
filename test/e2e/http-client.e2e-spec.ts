@@ -85,4 +85,63 @@ describe('Outbound HTTP (e2e)', () => {
         // Assert
         expect(received[0]?.['user-agent']).toBe(APP_NAME);
     });
+
+    it('continues the caller\u2019s W3C trace when calling the next service', async () => {
+        // Arrange
+        received.length = 0;
+        const traceId = 'a'.repeat(32);
+        const traceparent = `00-${traceId}-${'b'.repeat(16)}-01`;
+
+        // Act
+        const res = await request(app.getHttpServer())
+            .get('/v1/e2e-upstream')
+            .set('traceparent', traceparent);
+
+        // Assert: same trace, this service's own span
+        const sent = (res.body as Envelope).data.seenHeaders.traceparent;
+        expect(sent).toMatch(new RegExp(`^00-${traceId}-[0-9a-f]{16}-01$`));
+        expect(sent).not.toBe(traceparent);
+    });
+
+    it('starts a trace of its own when the caller sent none', async () => {
+        // Arrange
+        received.length = 0;
+
+        // Act
+        const res = await request(app.getHttpServer()).get('/v1/e2e-upstream');
+
+        // Assert
+        expect((res.body as Envelope).data.seenHeaders.traceparent).toMatch(
+            /^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/,
+        );
+    });
+
+    it('returns the correlation and trace headers to its own caller', async () => {
+        // Arrange
+        const requestId = 'e2e-echo-1';
+
+        // Act
+        const res = await request(app.getHttpServer())
+            .get('/v1/e2e-upstream')
+            .set('x-request-id', requestId);
+
+        // Assert: a caller that never parses the envelope can still correlate a failure
+        expect(res.headers['x-request-id']).toBe(requestId);
+        expect(res.headers.traceparent).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-0[01]$/);
+    });
+
+    it('replaces a correlation id that is not safe to print', async () => {
+        // Arrange
+        // no newline: Node's own client rejects those. Still hostile: 500 chars of quoted JSON
+        const hostile = `"level":30,"msg":"fake log line" ${'x'.repeat(500)}`;
+
+        // Act
+        const res = await request(app.getHttpServer())
+            .get('/v1/e2e-upstream')
+            .set('x-request-id', hostile);
+
+        // Assert
+        expect(res.headers['x-request-id']).not.toBe(hostile);
+        expect(res.headers['x-request-id']).toMatch(/^[A-Za-z0-9._:-]{1,128}$/);
+    });
 });

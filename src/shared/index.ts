@@ -1,3 +1,5 @@
+export { SAFE_CORRELATION_ID, isSafeCorrelationId } from './correlation';
+
 export {
     type PresentableError,
     type ProblemKind,

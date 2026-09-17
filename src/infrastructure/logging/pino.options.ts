@@ -3,6 +3,7 @@ import { type IncomingMessage } from 'node:http';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import type { ConfigPort } from '@application/ports';
+import { isSafeCorrelationId } from '@shared';
 import type { Response } from 'express';
 import type { Params } from 'nestjs-pino';
 import type { TransportTargetOptions } from 'pino';
@@ -75,7 +76,9 @@ export const generatePinoOptions = (config: ConfigPort): Params => {
             transport: { targets },
             genReqId: (req: IncomingMessage) => {
                 const header = req.headers[requestIdHeader];
-                const requestId = (Array.isArray(header) ? header[0] : header) || randomUUID();
+                const candidate = Array.isArray(header) ? header[0] : header;
+                // a client-supplied id lands in every log line for this request: keep it bounded
+                const requestId = isSafeCorrelationId(candidate) ? candidate : randomUUID();
                 req.headers[requestIdHeader] = requestId;
                 req.id = requestId;
                 return requestId;

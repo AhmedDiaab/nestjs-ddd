@@ -4,6 +4,12 @@ import { createToken } from '@shared';
 export type RequestContext = {
     /** Correlation id of the incoming request; propagated to services this one calls. */
     requestId?: string;
+    /** W3C trace id: the same value across every service handling this request. */
+    traceId?: string;
+    /** This service's span in that trace. */
+    spanId?: string;
+    /** The caller's sampling decision, passed on unchanged. */
+    sampled?: boolean;
 };
 
 export interface RequestContextPort {
