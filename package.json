@@ -21,6 +21,7 @@
         "lint:fix": "eslint . --fix",
         "check:circular": "madge src --circular --warning --no-spinner",
         "typecheck": "tsc --noEmit -p tsconfig.json",
+        "verify": "pnpm typecheck && pnpm lint && pnpm lint:test && pnpm check:circular && pnpm test && pnpm test:e2e && pnpm build",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "format:check": "prettier --check \"**/*.{ts,js,json,md,html,css}\"",
         "test": "jest",

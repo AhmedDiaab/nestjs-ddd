@@ -28,6 +28,9 @@ lerna-debug.log*
 .settings/
 *.sublime-workspace
 
+# Claude Code personal overrides (project settings in .claude/settings.json are shared)
+.claude/settings.local.json
+
 # IDE - VSCode
 .vscode/*
 !.vscode/settings.json

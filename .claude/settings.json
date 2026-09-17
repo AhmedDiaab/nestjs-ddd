@@ -1,0 +1,50 @@
+{
+    "$schema": "https://json.schemastore.org/claude-code-settings.json",
+    "permissions": {
+        "allow": [
+            "Bash(pnpm verify)",
+            "Bash(pnpm typecheck)",
+            "Bash(pnpm lint)",
+            "Bash(pnpm lint:test)",
+            "Bash(pnpm lint:fix)",
+            "Bash(pnpm check:circular)",
+            "Bash(pnpm test)",
+            "Bash(pnpm test *)",
+            "Bash(pnpm test:e2e)",
+            "Bash(pnpm test:e2e *)",
+            "Bash(pnpm test:cov)",
+            "Bash(pnpm build)",
+            "Bash(pnpm format)",
+            "Bash(pnpm exec jest *)",
+            "Bash(pnpm exec prettier *)",
+            "Bash(git status *)",
+            "Bash(git diff *)",
+            "Bash(git log *)",
+            "Bash(git show *)"
+        ],
+        "deny": [
+            "Read(./.env)",
+            "Read(./.env.local)",
+            "Read(./.env.development)",
+            "Read(./.env.test)",
+            "Read(./.env.staging)",
+            "Read(./.env.production)",
+            "Read(./.env.*.local)"
+        ]
+    },
+    "hooks": {
+        "PostToolUse": [
+            {
+                "matcher": "Write|Edit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; case \"$f\" in *.ts|*.md|*.json) cd \"$CLAUDE_PROJECT_DIR\" && pnpm exec prettier --write --log-level error \"$f\" ;; esac; } 2>/dev/null || true",
+                        "timeout": 30,
+                        "statusMessage": "Formatting with prettier"
+                    }
+                ]
+            }
+        ]
+    }
+}
