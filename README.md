@@ -198,6 +198,22 @@ pnpm test:e2e         # boots AppModule without a database
 
 If you add non-TS runtime files (e.g. mail templates), list them in `nest-cli.json` → `compilerOptions.assets` so they are copied to `dist`.
 
+### 8.1 Windows service (NSSM)
+
+`start-service.ps1` / `stop-service.ps1` run the built app as a Windows service. Run them as Administrator from the repo root. Prerequisites: [NSSM](https://nssm.cc) on PATH, Node.js ≥ 22.18, `pnpm install && pnpm build`.
+
+```powershell
+.\start-service.ps1                                   # NestjsDddApiService, NODE_ENV=production
+.\start-service.ps1 -ServiceName MyApi -Environment staging -NodePath "E:\node\node.exe"
+.\stop-service.ps1 -ServiceName MyApi                 # stop, keep registered
+.\stop-service.ps1 -ServiceName MyApi -Remove         # stop and unregister
+```
+
+- Runs `node dist\main.js` directly. Only `NODE_ENV` is set on the service; dotenv-flow loads `.env.<env>` from the app directory, so secrets are not stored in the service registry.
+- Re-running `start-service.ps1` reinstalls the service with the current settings.
+- Stop sends Ctrl+C and waits `-StopTimeoutMs` (default 15000) so shutdown hooks can drain DB pools; keep it above `drainTimeSec`.
+- Restarts on crash after 5 s. Service stdout/stderr go to `logs\service-*.log` (rotated at 10 MB); app logs still rotate via pino-roll.
+
 ## 9. Extending
 
 1. **Domain**: entities/value objects under `src/domain` (validate in static `create`, return `Result`).
