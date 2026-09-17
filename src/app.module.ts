@@ -1,6 +1,6 @@
 import { ApplicationModule } from '@application';
 import { InfrastructureModule } from '@infrastructure';
-import { InterfaceModule } from '@interface';
+import { InterfaceModule, SchedulerModule } from '@interface';
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -11,7 +11,7 @@ import { AppService } from './app.service';
  * interface exposes them. Layers never import each other's Nest modules.
  */
 @Module({
-    imports: [InfrastructureModule, ApplicationModule, InterfaceModule],
+    imports: [InfrastructureModule, ApplicationModule, InterfaceModule, SchedulerModule],
     controllers: [AppController],
     providers: [AppService],
 })

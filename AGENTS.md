@@ -39,7 +39,7 @@ interface → application → domain        infrastructure implements ports
 | Domain         | `src/domain`         | entities, value objects, aggregates, domain errors, **aggregate repository interfaces + tokens** | `@application`, `@infrastructure`, `@interface`, `@nestjs/*` |
 | Application    | `src/application`    | use cases, **query/gateway ports + tokens**, application errors                                  | `@infrastructure`, `@interface`, `oracledb`, `express`       |
 | Infrastructure | `src/infrastructure` | config, logging, auth, DB clients, repositories, DAOs, mappers                                   | `@interface`                                                 |
-| Interface      | `src/interface/http` | controllers, Zod schemas, guards, interceptors, filter                                           | adapter internals (tokens/contracts only)                    |
+| Interface      | `src/interface`      | HTTP (controllers, Zod schemas, guards, interceptors, filter) and `scheduler/` cron jobs         | adapter internals (tokens/contracts only)                    |
 
 - A port lives with the layer that **calls** it; its implementation lives in infrastructure.
 - Tokens: `createToken<Port>('Name')` from `@shared`. Bind with `ProviderFactory.class|factory|value` (typed; wrong bindings don't compile).
@@ -86,6 +86,7 @@ Follow the matching guide; each has complete, compiled example code:
 | Database owned by another team (procedures, functions, cursors) | [`docs/guides/work-with-a-database-you-dont-own.md`](docs/guides/work-with-a-database-you-dont-own.md)                                                   |
 | Use case                                                        | [`docs/guides/add-use-case.md`](docs/guides/add-use-case.md)                                                                                             |
 | Controller / endpoint                                           | [`docs/guides/add-controller.md`](docs/guides/add-controller.md)                                                                                         |
+| Scheduled job (cron)                                            | [`docs/guides/add-a-scheduled-job.md`](docs/guides/add-a-scheduled-job.md)                                                                               |
 | Error → HTTP status                                             | [`docs/guides/add-error.md`](docs/guides/add-error.md)                                                                                                   |
 | Config variable                                                 | [`docs/guides/add-config-variable.md`](docs/guides/add-config-variable.md)                                                                               |
 | Database source / dialect                                       | [`docs/guides/add-database-source.md`](docs/guides/add-database-source.md), [`docs/guides/add-database-dialect.md`](docs/guides/add-database-dialect.md) |

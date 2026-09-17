@@ -16,3 +16,5 @@ export { type HttpConfig, httpSchema } from './http.schema';
 export { type LoggingConfig, loggingSchema } from './logging.schema';
 
 export { type JWTConfig, jwtSchema } from './jwt.schema';
+
+export { type SchedulerConfig, schedulerSchema } from './scheduler.schema';

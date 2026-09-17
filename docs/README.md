@@ -16,6 +16,7 @@ Start here. Each link is one focused document.
 | Use another team's database (procedures, functions, cursors, no migrations)    | [Work with a database you don't own](guides/work-with-a-database-you-dont-own.md) |
 | Add business logic                                                             | [Add a use case](guides/add-use-case.md)                                          |
 | Expose an HTTP endpoint                                                        | [Add a controller](guides/add-controller.md)                                      |
+| Run work on a schedule (cron)                                                  | [Add a scheduled job](guides/add-a-scheduled-job.md)                              |
 | Return a specific HTTP status for a failure                                    | [Add an error](guides/add-error.md)                                               |
 | Add an environment variable                                                    | [Add a config variable](guides/add-config-variable.md)                            |
 | Connect another database / schema                                              | [Add a database source](guides/add-database-source.md)                            |

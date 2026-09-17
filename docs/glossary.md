@@ -18,13 +18,13 @@ Every one of them is called by a **use case**, which the **controller** calls. E
 
 ## Layers
 
-| Term                | Means here                                                                          | Folder                     |
-| ------------------- | ----------------------------------------------------------------------------------- | -------------------------- |
-| **Domain**          | business rules that would still exist without HTTP or a database                    | `src/domain`               |
-| **Application**     | one class per user intention (use cases) plus the ports they need                   | `src/application`          |
-| **Infrastructure**  | everything that talks to the outside: config, logging, auth, database adapters      | `src/infrastructure`       |
-| **Interface**       | HTTP delivery: controllers, validation, guards, interceptors, error mapping         | `src/interface/http`       |
-| **Shared / common** | framework-free helpers (`Result`, problem kinds, envelope, tokens) and Nest helpers | `src/shared`, `src/common` |
+| Term                | Means here                                                                                       | Folder                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| **Domain**          | business rules that would still exist without HTTP or a database                                 | `src/domain`                                    |
+| **Application**     | one class per user intention (use cases) plus the ports they need                                | `src/application`                               |
+| **Infrastructure**  | everything that talks to the outside: config, logging, auth, database adapters                   | `src/infrastructure`                            |
+| **Interface**       | delivery: HTTP (controllers, validation, guards, interceptors, error mapping) and scheduled jobs | `src/interface/http`, `src/interface/scheduler` |
+| **Shared / common** | framework-free helpers (`Result`, problem kinds, envelope, tokens) and Nest helpers              | `src/shared`, `src/common`                      |
 
 Dependencies point inward: interface → application → domain. Infrastructure implements ports and is wired in `AppModule`, the **composition root**.
 
@@ -79,15 +79,16 @@ A repository is not "any class with SQL": a read-only list belongs in a DAO even
 
 ## Interface (HTTP)
 
-| Term             | Means here                                                                                                 |
-| ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Controller**   | validates, reads the user, calls one use case, returns its `Result`                                        |
-| **Envelope**     | the response shape every route produces: `{ success, data, meta }` or `{ success: false, error, meta }`    |
-| **Interceptor**  | wraps requests/responses: Zod validation (`ZodHttpInterceptor`), envelope (`ResponseFormatterInterceptor`) |
-| **Guard**        | allows or refuses a request before validation: `JwtGuard`, `CsrfGuard`, `ThrottlerGuard`                   |
-| **Filter**       | turns anything thrown into an envelope with the right status (`GlobalExceptionFilter`)                     |
-| **Problem kind** | semantic failure type (`not_found`, `conflict`, `validation`…) that `ErrorPresenter` maps to a status      |
-| **Schema**       | Zod schema per request part; also generates the Swagger docs                                               |
+| Term              | Means here                                                                                                 |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Controller**    | validates, reads the user, calls one use case, returns its `Result`                                        |
+| **Envelope**      | the response shape every route produces: `{ success, data, meta }` or `{ success: false, error, meta }`    |
+| **Interceptor**   | wraps requests/responses: Zod validation (`ZodHttpInterceptor`), envelope (`ResponseFormatterInterceptor`) |
+| **Guard**         | allows or refuses a request before validation: `JwtGuard`, `CsrfGuard`, `ThrottlerGuard`                   |
+| **Filter**        | turns anything thrown into an envelope with the right status (`GlobalExceptionFilter`)                     |
+| **Problem kind**  | semantic failure type (`not_found`, `conflict`, `validation`…) that `ErrorPresenter` maps to a status      |
+| **Schema**        | Zod schema per request part; also generates the Swagger docs                                               |
+| **Scheduled job** | a class that runs on a cron expression and calls a use case; a delivery mechanism like a controller        |
 
 ## Infrastructure and runtime
 

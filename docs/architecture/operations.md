@@ -117,6 +117,17 @@ Response (`/health/ready`):
 
 On `SIGTERM`/`SIGINT` (Ctrl+C), Nest shutdown hooks close every DB pool with `drainTimeSec`. Give the process manager a stop timeout above that value.
 
+## Scheduled jobs
+
+Cron jobs live in `src/interface/scheduler` and run inside the API process, off unless `SCHEDULER_ENABLED=true`, with cron expressions read in `SCHEDULER_TIMEZONE` (default UTC).
+
+- **Every instance with the switch on runs every job.** Behind a load balancer, run one instance with `SCHEDULER_ENABLED=true` (the "worker") and leave it off on the others, or make the jobs safe to run several times.
+- The worker can stay in the pool (it still serves HTTP) or be taken out of it; either way its `/health` must answer for the monitor.
+- Failures are logged as `scheduler.job.failed` and never stop the process; overlapping runs are skipped (`scheduler.job.skipped`). Alert on those two events.
+- Startup logs one `scheduler.job.scheduled` per job with its next run; `scheduler.disabled` means the switch is off.
+- On shutdown a run in progress is not awaited, so jobs must be safe to repeat.
+- Writing one: [Add a scheduled job](../guides/add-a-scheduled-job.md).
+
 ## Windows service (NSSM)
 
 `start-service.ps1` / `stop-service.ps1` at the repository root. Run as Administrator.

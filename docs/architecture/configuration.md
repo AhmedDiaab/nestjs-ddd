@@ -59,6 +59,8 @@ Adding a variable: [Add a config variable](../guides/add-config-variable.md).
 | `TRUST_PROXY`                                               | `false`                         | set behind a load balancer so throttling sees client IPs                                                                        |
 | `CSRF_ENABLED`                                              | `true`                          | reject cross-site POST/PUT/PATCH/DELETE authenticated by the JWT cookie ([HTTP interface](http-interface.md#security-defaults)) |
 | `CSRF_TRUSTED_ORIGINS`                                      | `CORS_ORIGINS`                  | origins allowed to send cookie-authenticated writes, besides the API's own                                                      |
+| `SCHEDULER_ENABLED`                                         | `false`                         | run the cron jobs in this instance ([Operations → Scheduled jobs](operations.md#scheduled-jobs))                                |
+| `SCHEDULER_TIMEZONE`                                        | `UTC`                           | IANA timezone the cron expressions are read in                                                                                  |
 
 ### JWT
 

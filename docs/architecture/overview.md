@@ -17,7 +17,7 @@ common, shared: helpers usable by every layer (shared is framework-free)
 | Domain         | `src/domain`         | entities, value objects, aggregates, domain errors, **repository interfaces**             | `@shared`, itself                                                           | `@application`, `@infrastructure`, `@interface`, `@nestjs/*`        |
 | Application    | `src/application`    | use cases, **query/gateway ports**, DI tokens, application errors                         | `@domain`, `@common`, `@shared`, `@nestjs/common` (DI decorators)           | `@infrastructure`, `@interface`, `oracledb`, `express`, `passport*` |
 | Infrastructure | `src/infrastructure` | adapters: config, logging, auth strategy, database (pools, clients, repositories, DAOs)   | `@application`, `@domain`, `@common`, `@shared`, drivers                    | `@interface`                                                        |
-| Interface      | `src/interface`      | controllers, guards, interceptors, exception filter, Zod schemas, Swagger                 | `@application`, `@domain`, `@common`, `@shared`, infra **tokens/contracts** | adapter internals                                                   |
+| Interface      | `src/interface`      | controllers, guards, interceptors, exception filter, Zod schemas, Swagger, cron jobs      | `@application`, `@domain`, `@common`, `@shared`, infra **tokens/contracts** | adapter internals                                                   |
 | Common         | `src/common`         | Nest-aware helpers: `ProviderFactory`, `UseCase` base, utils                              | `@shared`, `@nestjs/common`                                                 | layers                                                              |
 | Shared         | `src/shared`         | framework-free primitives: `Result`, `Problem`, envelope types, pagination, `createToken` | nothing app-specific                                                        | everything else                                                     |
 
@@ -57,6 +57,8 @@ src/
 │       ├── types/ utils/
 │       ├── sources.ts      # source keys used by DAOs/repositories
 │       └── database.module.ts
+├── interface/
+│   └── scheduler/          # cron jobs (ScheduledJob, JobScheduler), off unless SCHEDULER_ENABLED
 ├── interface/http/
 │   ├── controllers/        # HealthController, DatabaseInfoController
 │   ├── common/             # FallbackController (404), ResponseFormatterInterceptor
@@ -80,11 +82,12 @@ test/
 `AppModule` is the only place that wires layers together:
 
 ```ts
-@Module({ imports: [InfrastructureModule, ApplicationModule, InterfaceModule], ... })
+@Module({ imports: [InfrastructureModule, ApplicationModule, InterfaceModule, SchedulerModule], ... })
 ```
 
 - `InfrastructureModule` imports `ConfigModule`, `PinoLoggerModule`, `DatabaseModule` (all `@Global`) and `AuthModule`. Global modules export port tokens, so use cases can inject them without importing infrastructure.
 - `ApplicationModule` registers use cases only.
+- `SchedulerModule` registers cron jobs (off unless `SCHEDULER_ENABLED`); see [Operations → Scheduled jobs](operations.md#scheduled-jobs).
 - `InterfaceModule` imports `ApplicationModule` and registers controllers, the throttler guard, interceptors and the exception filter. `FallbackController` must stay **last** in `controllers` (its catch-all route shadows later ones).
 
 ## Request lifecycle

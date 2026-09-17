@@ -5,6 +5,7 @@ import {
     httpSchema,
     jwtSchema,
     loggingSchema,
+    schedulerSchema,
 } from '@infrastructure/config/schemas';
 import { z } from 'zod';
 import { envBool, envList, envString } from './env.util';
@@ -17,6 +18,7 @@ const rootSchema = z.object({
     // optional: services without a database leave DATABASE_CONFIG_JSON unset
     database: databaseConfigSchema.optional(),
     jwt: jwtSchema,
+    scheduler: schedulerSchema,
 });
 
 // hydrate from process.env once, then validate
@@ -88,6 +90,10 @@ function hydrate() {
             issuer: envString(env.JWT_ISSUER),
             audience: envString(env.JWT_AUDIENCE),
             cookieName: envString(env.JWT_COOKIE_NAME),
+        },
+        scheduler: {
+            enabled: envBool(env.SCHEDULER_ENABLED),
+            timezone: envString(env.SCHEDULER_TIMEZONE),
         },
     };
 }
