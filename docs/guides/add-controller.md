@@ -54,7 +54,6 @@ import {
 } from '@application/use-cases';
 import type { JWTPayload } from '@domain/auth';
 import { CurrentUser, UseZodHttp, Validated } from '@interface/http/decorators';
-import { JwtGuard } from '@interface/http/guards';
 import {
     listTicketsQuerySchema,
     openTicketBodySchema,
@@ -63,7 +62,7 @@ import {
     type OpenTicketBody,
     type TicketIdParams,
 } from '@interface/http/schemas';
-import { Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { BEARER_SECURITY } from '../swagger/swagger.constants';
 
@@ -74,8 +73,7 @@ import { BEARER_SECURITY } from '../swagger/swagger.constants';
  */
 @ApiTags('tickets')
 @ApiBearerAuth(BEARER_SECURITY)
-@UseGuards(JwtGuard)
-@Controller('tickets')
+@Controller('tickets') // authentication is global; nothing to add
 export class TicketsController {
     constructor(
         private readonly openTicket: OpenTicketUseCase,
@@ -145,7 +143,7 @@ controllers: [HealthController, DatabaseInfoController, TicketsController, Fallb
 - Return the use case's `Result` directly; don't unwrap it or throw `HttpException`s for business failures.
 - Always pass `user.username` so the database sees who acted.
 - POST that doesn't create a resource: add `@HttpCode(HttpStatus.OK)`.
-- Public route on a guarded controller: put `@UseGuards(JwtGuard)` on methods instead of the class.
+- Authentication is global: a route needs a token unless it is marked `@Public()` (whole controller or single handler). Adding a strategy, or making authentication per-controller instead: [Add an authentication strategy](add-an-auth-strategy.md).
 - Guards that read request data: validate with `readGuardInput(context, 'params', schema)` and throw `ForbiddenError`/`UnauthorizedError`.
 - Swagger: `@ApiTags` and security decorators. Request docs come from `@UseZodHttp` automatically; add `@ZodResponse(200, schema)` (from `../swagger`) to document the response body. Use `.describe('...')` on schema fields for descriptions.
 - Versioned change: `@Controller({ path: 'tickets', version: '2' })`.

@@ -66,7 +66,9 @@ Keep HTTP schemas structural (types, formats, enums, ranges). Business rules (tr
 ## Authentication
 
 - `JwtStrategy` (`src/infrastructure/auth/strategies/jwt.strategy.ts`) reads the token from the cookie named by `JWT_COOKIE_NAME` (default `jwt`), falling back to `Authorization: Bearer`. It verifies the secret, `JWT_ALGORITHMS`, `JWT_ISSUER` and `JWT_AUDIENCE`.
-- `@UseGuards(JwtGuard)` on a controller or route returns 401 without a valid token.
+- `JwtGuard` is registered **globally** (`APP_GUARD` in `interface.module.ts`): every route needs a valid token unless it is marked `@Public()`. A new route is protected by default; forgetting a decorator gives a 401, not an open endpoint.
+- `@Public()` (`decorators/public.decorator.ts`) opens one handler or a whole controller. Public in the template: `HealthController`, `FallbackController` (unknown paths stay 404) and the root controller.
+- `@UseGuards(JwtGuard)` still works for a per-controller setup; adding another strategy or making authentication opt-in: [Add an authentication strategy](../guides/add-an-auth-strategy.md).
 - `@CurrentUser()` injects `req.user` (`JWTPayload`); `@CurrentUser('username')` injects one field.
 - This service only **verifies** tokens; issuing them is another service's job.
 

@@ -54,6 +54,7 @@ Details: [`docs/architecture/overview.md`](docs/architecture/overview.md).
 - **Use cases** extend `UseCase<Input, Output, Failure>`. Expected failures: `return this.err(new SomeError())` (an `AppError`/`DomainError` whose problem kind maps to the HTTP status). Unexpected: throw. Never throw `HttpException` from application/domain.
 - **Controllers** only validate (`@UseZodHttp` + `@Validated('body'|'query'|'params')`), read `@CurrentUser()`, call one use case, and return its `Result`. Register them in `interface.module.ts` **before** `FallbackController`.
 - **Never assign `req.query`** (read-only in Express 5). Use `@Validated('query')`.
+- **Authentication is global**: `JwtGuard` is an `APP_GUARD`, so every route needs a token unless it carries `@Public()`. Never open a route to fix a failing test; add the token to the test instead.
 - **Guards** run before validation: use `readGuardInput(context, part, schema)` and throw `ForbiddenError`/`UnauthorizedError`; don't `return false`.
 - **Database access**:
     - always bind values (`:name`); never interpolate input into SQL
@@ -86,6 +87,7 @@ Follow the matching guide; each has complete, compiled example code:
 | Database owned by another team (procedures, functions, cursors) | [`docs/guides/work-with-a-database-you-dont-own.md`](docs/guides/work-with-a-database-you-dont-own.md)                                                   |
 | Use case                                                        | [`docs/guides/add-use-case.md`](docs/guides/add-use-case.md)                                                                                             |
 | Controller / endpoint                                           | [`docs/guides/add-controller.md`](docs/guides/add-controller.md)                                                                                         |
+| Authentication strategy / where auth applies                    | [`docs/guides/add-an-auth-strategy.md`](docs/guides/add-an-auth-strategy.md)                                                                             |
 | Scheduled job (cron)                                            | [`docs/guides/add-a-scheduled-job.md`](docs/guides/add-a-scheduled-job.md)                                                                               |
 | Error → HTTP status                                             | [`docs/guides/add-error.md`](docs/guides/add-error.md)                                                                                                   |
 | Config variable                                                 | [`docs/guides/add-config-variable.md`](docs/guides/add-config-variable.md)                                                                               |

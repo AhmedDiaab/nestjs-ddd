@@ -85,6 +85,7 @@ A repository is not "any class with SQL": a read-only list belongs in a DAO even
 | **Envelope**      | the response shape every route produces: `{ success, data, meta }` or `{ success: false, error, meta }`    |
 | **Interceptor**   | wraps requests/responses: Zod validation (`ZodHttpInterceptor`), envelope (`ResponseFormatterInterceptor`) |
 | **Guard**         | allows or refuses a request before validation: `JwtGuard`, `CsrfGuard`, `ThrottlerGuard`                   |
+| **`@Public()`**   | marks a handler or controller as reachable without authentication; everything else needs a token           |
 | **Filter**        | turns anything thrown into an envelope with the right status (`GlobalExceptionFilter`)                     |
 | **Problem kind**  | semantic failure type (`not_found`, `conflict`, `validation`…) that `ErrorPresenter` maps to a status      |
 | **Schema**        | Zod schema per request part; also generates the Swagger docs                                               |
