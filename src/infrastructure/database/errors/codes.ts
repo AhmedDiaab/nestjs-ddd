@@ -1,0 +1,8 @@
+export const ERR = {
+    DB_UNKNOWN_SOURCE: 'DB_UNKNOWN_SOURCE',
+    DB_UNSUPPORTED_DIALECT: 'DB_UNSUPPORTED_DIALECT',
+    DB_CONNECTION_FAILED: 'DB_CONNECTION_FAILED',
+    DB_EXECUTION_FAILED: 'DB_EXECUTION_FAILED',
+} as const;
+
+export type InfraErrorCode = (typeof ERR)[keyof typeof ERR];

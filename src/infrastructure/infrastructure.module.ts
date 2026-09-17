@@ -1,10 +1,12 @@
+import { AuthModule } from '@infrastructure/auth/auth.module';
+import { ConfigModule } from '@infrastructure/config';
+import { DatabaseModule } from '@infrastructure/database';
+import { PinoLoggerModule } from '@infrastructure/logging';
 import { Module } from '@nestjs/common';
-import { ConfigModule } from './config/config.module';
-import { PinoLoggerModule } from './logging/pino.module';
 
+/** Port implementations. Config, logging and database modules are global. */
 @Module({
-    imports: [ConfigModule, PinoLoggerModule],
-    providers: [],
-    exports: [ConfigModule, PinoLoggerModule],
+    imports: [ConfigModule, PinoLoggerModule, DatabaseModule, AuthModule],
+    exports: [ConfigModule, PinoLoggerModule, DatabaseModule, AuthModule],
 })
 export class InfrastructureModule {}
