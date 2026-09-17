@@ -22,6 +22,8 @@ Vocabulary used below (repository vs DAO vs gateway, read model, unit of work…
 | E2E tests                                               | `pnpm test:e2e`                                          |
 | Live Oracle tests (needs a DB)                          | `ORACLE_IT_PASSWORD=… pnpm test:oracle`                  |
 | Windows service scripts (needs Docker)                  | `pnpm test:service-scripts`                              |
+| Coverage (fails below the floor in `jest.config.ts`)    | `pnpm test:cov`                                          |
+| Formatting (CI checks it)                               | `pnpm format:check` / `pnpm format`                      |
 | Build                                                   | `pnpm build`                                             |
 | Run locally                                             | `pnpm start:dev` (needs `.env.development`)              |
 | Run with Docker (API + Oracle)                          | `docker compose --env-file .env.docker up --build`       |
@@ -99,7 +101,7 @@ Before changing a documented decision, read [`docs/decisions/`](docs/decisions/R
 ## Boundaries
 
 - **Don't** read, print or commit `.env*` files other than `.env.example`; never put secrets in code, tests, logs or docs.
-- **Don't** weaken lint rules, `strict` TypeScript, or the layer restrictions to make a change pass. Fix the design instead.
+- **Don't** weaken lint rules, `strict` TypeScript, the layer restrictions or the coverage floor to make a change pass. Fix the design instead; raise the floor when coverage rises.
 - **Don't** edit `pnpm-lock.yaml` by hand; add dependencies with `pnpm add` and justify them.
 - **Don't** remove the context-user clear/drop logic in `OracleClient` or bypass `ConnectionProvider` from use cases.
 - **Ask first** before: changing public HTTP response shapes, DB schema/migrations, auth/JWT verification, CORS/helmet/throttling defaults, or the Windows service scripts.
@@ -107,7 +109,7 @@ Before changing a documented decision, read [`docs/decisions/`](docs/decisions/R
 
 ## Definition of done
 
-1. `pnpm verify` passes, with no new lint suppressions.
+1. `pnpm verify` passes, with no new lint suppressions. CI runs the same commands plus `pnpm format:check` and `pnpm test:cov` on every pull request.
 2. Tests were added or updated for new behaviour, including failure paths and HTTP statuses.
 3. Docs/`.env.example` updated if config, endpoints or conventions changed.
 4. Commits follow Conventional Commits (`feat(scope): …`, `fix(scope): …`), with a body explaining _why_ for fixes.

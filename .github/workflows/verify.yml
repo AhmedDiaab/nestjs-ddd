@@ -1,0 +1,64 @@
+name: verify
+
+on:
+    pull_request:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+# a new push to the same branch cancels the run still going for the previous one
+concurrency:
+    group: verify-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+
+jobs:
+    verify:
+        name: typecheck, lint, tests, build
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: pnpm/action-setup@v4 # version comes from package.json "packageManager"
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version-file: .nvmrc
+                  cache: pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Check formatting
+              run: pnpm format:check
+
+            - name: Verify (typecheck, lint, cycles, unit + e2e, build)
+              run: pnpm verify
+
+            - name: Coverage (fails below the floor in jest.config.ts)
+              run: pnpm test:cov
+
+            - name: Upload coverage
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage
+                  path: coverage/
+                  retention-days: 7
+
+    service-scripts:
+        name: Windows service scripts
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        steps:
+            - uses: actions/checkout@v4
+
+            # the scripts are PowerShell; the container checks them without a Windows runner
+            - name: Check start/stop scripts
+              run: |
+                  docker run --rm -v "$PWD":/repo:ro \
+                    mcr.microsoft.com/powershell:lts-alpine-3.20 \
+                    pwsh -NoProfile -File /repo/test/windows-service/service-scripts.tests.ps1

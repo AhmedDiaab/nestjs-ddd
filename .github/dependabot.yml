@@ -1,0 +1,20 @@
+version: 2
+updates:
+    - package-ecosystem: npm
+      directory: /
+      schedule:
+          interval: weekly
+      open-pull-requests-limit: 5
+      groups:
+          # one pull request per family: they release together and verify runs once
+          nestjs:
+              patterns: ['@nestjs/*']
+          types:
+              patterns: ['@types/*']
+          lint-and-format:
+              patterns: ['eslint*', '@typescript-eslint/*', 'typescript-eslint', 'prettier*']
+
+    - package-ecosystem: github-actions
+      directory: /
+      schedule:
+          interval: monthly

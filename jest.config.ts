@@ -29,6 +29,10 @@ const config: Config = {
         '^@mocks/(.*)$': '<rootDir>/test/mocks/$1',
     },
     coveragePathIgnorePatterns: ['main.ts', 'repl.ts', 'src/common/(base|contracts)/*'],
+    // floor, not a target: raise it when coverage rises, never lower it to make a change pass
+    coverageThreshold: {
+        global: { statements: 80, branches: 65, functions: 63, lines: 80 },
+    },
 };
 
 export default config;

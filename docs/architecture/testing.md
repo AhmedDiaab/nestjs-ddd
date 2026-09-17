@@ -5,7 +5,7 @@
 | Command                             | What                                                                                                                                                                                          |
 | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pnpm test`                         | unit tests (`test/unit/**/*.spec.ts`)                                                                                                                                                         |
-| `pnpm test:watch` / `pnpm test:cov` | watch / coverage (`coverage/`)                                                                                                                                                                |
+| `pnpm test:watch` / `pnpm test:cov` | watch / coverage (`coverage/`); `test:cov` fails below the floor in `jest.config.ts`                                                                                                          |
 | `pnpm test:e2e`                     | e2e tests (`test/e2e/**/*.e2e-spec.ts`); boots `AppModule` over HTTP                                                                                                                          |
 | `pnpm test:oracle`                  | live Oracle tests (`test/integration/**/*.int-spec.ts`); skipped unless `ORACLE_IT_PASSWORD` is set, not part of `verify`                                                                     |
 | `pnpm test:service-scripts`         | runs `start-service.ps1`/`stop-service.ps1` in the PowerShell container with `nssm`, `node` and `Get-Service` faked; asserts the NSSM calls per scenario (needs Docker, not part of `verify`) |
@@ -41,6 +41,27 @@ Every test uses **Arrange-Act-Assert** with `// Arrange`, `// Act`, `// Assert` 
 | Interface                     | unit-test interceptors/filters with fake `ExecutionContext`; test routes via e2e                                                                                        |                                   |
 | Wiring                        | `test/unit/layers/*` checks module imports/controllers                                                                                                                  |                                   |
 | HTTP end to end               | `Test.createTestingModule({ imports: [AppModule] })` + `.overrideProvider(Token).useValue(fake)` + supertest                                                            | fakes, signed JWT                 |
+
+## Continuous integration
+
+`.github/workflows/verify.yml` runs on every pull request, on pushes to `main`, and on demand:
+
+| Job                         | Does                                                                                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **verify**                  | `pnpm format:check`, then `pnpm verify` (typecheck, lint, lint:test, cycles, unit, e2e, build), then `pnpm test:cov` for the coverage floor |
+| **Windows service scripts** | runs the PowerShell script tests in the container, so the scripts can't rot unnoticed                                                       |
+
+Node comes from `.nvmrc` and pnpm from `package.json`'s `packageManager`, so CI and a laptop run the same versions. Installs use `--frozen-lockfile`: a lockfile that doesn't match `package.json` fails the build instead of being silently updated. The coverage report is uploaded as an artifact, including on failure.
+
+Live Oracle tests are not in CI (they need a database). Run them before changing anything in the database layer: [Live Oracle tests](#live-oracle-tests).
+
+`dependabot.yml` opens weekly dependency pull requests (Nest, types and lint tooling grouped so one pull request runs `verify` once) and monthly action updates.
+
+### Coverage floor
+
+`jest.config.ts` sets a global `coverageThreshold`; `pnpm test:cov` fails below it. It is a **floor, not a target**: when coverage rises, raise the numbers — never lower them to make a change pass, which is the lint-rule rule ([Boundaries](../../AGENTS.md)) applied to tests. Raise it in the same commit that adds the tests, so the number never drifts back down quietly.
+
+Coverage counts lines executed, not behaviour checked. A test that runs code without asserting anything raises coverage and catches nothing, so treat the floor as the low bar and prove the important tests bite by breaking the code they cover ([Write tests](../guides/write-tests.md)).
 
 ## Existing coverage worth knowing
 

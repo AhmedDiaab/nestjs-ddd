@@ -1,0 +1,5 @@
+# generated or tool-owned files
+pnpm-lock.yaml
+dist
+coverage
+logs
