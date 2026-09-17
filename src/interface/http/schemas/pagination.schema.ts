@@ -1,9 +1,6 @@
 // interface/http/schemas/pagination.schema.ts
 import { z } from 'zod';
 
-// common pieces
-const orderDir = z.enum(['asc', 'desc']);
-
 export const OffsetQuerySchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     size: z.coerce.number().int().min(1).max(100).default(20),
@@ -28,13 +25,3 @@ export const CursorQuerySchema = z.object({
 });
 
 export type CursorQueryInput = z.infer<typeof CursorQuerySchema>;
-
-// Optional helpers if you want to parse "field:dir[,field2:dir]"
-export type OrderByPart = { field: string; dir: 'asc' | 'desc' };
-
-export function parseOrderBy(input: string): OrderByPart[] {
-    return input.split(',').map((seg) => {
-        const [field, dir] = seg.split(':');
-        return { field, dir: orderDir.parse(dir) };
-    });
-}

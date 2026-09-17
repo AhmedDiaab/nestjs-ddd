@@ -75,6 +75,9 @@ export default defineConfig([
             // If you use @ianvs/prettier-plugin-sort-imports, let Prettier handle sorting:
             'import/order': 'off',
 
+            // One class per file: errors, adapters, guards, use cases... each get their own file
+            'max-classes-per-file': ['error', 1],
+
             // Barrels list their exports by name: `export *` hides what a module exposes,
             // leaks internals and lets two modules silently export the same name
             'no-restricted-syntax': [
@@ -82,7 +85,7 @@ export default defineConfig([
                 {
                     selector: 'ExportAllDeclaration',
                     message:
-                        'No `export *`: list named exports, e.g. `export { Foo, type Bar } from \'./foo\'`.',
+                        "No `export *`: list named exports, e.g. `export { Foo, type Bar } from './foo'`.",
                 },
             ],
         },

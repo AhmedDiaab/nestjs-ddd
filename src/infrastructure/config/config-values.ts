@@ -1,4 +1,4 @@
-import type { AppConfig } from './env-config.adapter';
+import type { AppConfig } from './load-config';
 
 /**
  * Gives `ConfigPort.get` its keys and value types: the application port declares an empty

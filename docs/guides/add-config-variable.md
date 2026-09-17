@@ -34,7 +34,7 @@ export { type TicketsConfig, ticketsSchema } from './tickets.schema';
 ## 2. Hydrate from env
 
 ```ts
-// src/infrastructure/config/env-config.adapter.ts
+// src/infrastructure/config/load-config.ts
 import { /* ... */ ticketsSchema } from '@infrastructure/config/schemas';
 
 const rootSchema = z.object({
@@ -80,7 +80,7 @@ const maxPageSize = this.config.get('tickets.maxPageSize'); // number, typed fro
 ## 5. Test
 
 ```ts
-// test/unit/infrastructure/config/env-config.adapter.spec.ts
+// test/unit/infrastructure/config/load-config.spec.ts
 it('loads the tickets section with defaults', () => {
     // Arrange: only BASE_ENV is set
 

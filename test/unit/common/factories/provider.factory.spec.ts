@@ -1,23 +1,7 @@
 import { ProviderFactory } from '@common/factories';
 import { createToken } from '@shared';
-
-interface Greeter {
-    greet(): string;
-}
-interface Counter {
-    count(): number;
-}
-class EnglishGreeter implements Greeter {
-    constructor(private readonly name: string) {}
-    greet() {
-        return `hi ${this.name}`;
-    }
-}
-class SimpleCounter implements Counter {
-    count() {
-        return 1;
-    }
-}
+import { EnglishGreeter, type Greeter } from '../../../fixtures/di/english-greeter';
+import { SimpleCounter, type Counter } from '../../../fixtures/di/simple-counter';
 
 const GreeterToken = createToken<Greeter>('test:Greeter');
 const CounterToken = createToken<Counter>('test:Counter');

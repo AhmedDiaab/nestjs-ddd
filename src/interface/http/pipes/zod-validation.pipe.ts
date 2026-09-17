@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, type PipeTransform } from '@nestjs/common';
 import type { ZodType } from 'zod';
-import { formatZodError } from '../interceptors/zod-http.interceptor';
+import { formatZodError } from '../common/format-zod-error.util';
 
 type Options = { async?: boolean };
 

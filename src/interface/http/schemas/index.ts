@@ -3,6 +3,6 @@ export {
     CursorQuerySchema,
     type OffsetQueryInput,
     OffsetQuerySchema,
-    parseOrderBy,
-    type OrderByPart,
 } from './pagination.schema';
+
+export { parseOrderBy, type OrderByPart } from './order-by.util';

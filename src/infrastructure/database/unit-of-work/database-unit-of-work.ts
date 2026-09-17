@@ -2,14 +2,7 @@ import type { UnitOfWorkOptions, UnitOfWorkPort } from '@application/ports';
 import type { ConnectionProvider } from '@infrastructure/database/contracts';
 import { DatabaseSources } from '@infrastructure/database/sources';
 import { isResultLike } from '@shared';
-
-/** Carries a failed Result out of the transaction so it rolls back, then is returned as a value. */
-class RollbackWithResult extends Error {
-    constructor(readonly result: unknown) {
-        super('unit of work returned a failed Result');
-        this.name = 'RollbackWithResult';
-    }
-}
+import { RollbackWithResult } from './rollback-with-result.error';
 
 /**
  * UnitOfWorkPort over one transaction on the main source. Repository and DAO calls made inside

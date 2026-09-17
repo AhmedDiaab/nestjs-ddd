@@ -7,7 +7,8 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import type { ZodError, ZodType } from 'zod';
+import type { ZodType } from 'zod';
+import { formatZodError } from '../common/format-zod-error.util';
 import { ZOD_HTTP_SCHEMA, type ZodHttpSchema } from '../decorators/zod-http.decorator';
 
 type Part = 'body' | 'query' | 'params' | 'headers';
@@ -61,12 +62,4 @@ export class ZodHttpInterceptor implements NestInterceptor {
 
         return next.handle();
     }
-}
-
-export function formatZodError(error: ZodError, part?: string) {
-    const details = error.issues.map((i) => {
-        const path = [part, ...i.path.map(String)].filter(Boolean).join('.');
-        return path ? `${path}: ${i.message}` : i.message;
-    });
-    return { message: 'Validation failed', details };
 }

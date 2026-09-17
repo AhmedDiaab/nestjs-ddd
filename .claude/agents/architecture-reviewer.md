@@ -56,6 +56,7 @@ You review diffs in a NestJS 11 layered/DDD codebase. Be precise and brief. Repo
     - No loosening of CORS/helmet/throttling/JWT checks without explicit request.
 9. **Singletons**: no `Scope.REQUEST`.
     - Barrels list named exports; no `export *`.
+    - One thing per file (decision 0008): no second class, decorator or unrelated helper added to an existing file; errors in their own `*.error.ts`.
 10. **Tests**
     - Domain rules
     - Every use-case failure path

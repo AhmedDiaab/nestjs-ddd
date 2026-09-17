@@ -104,6 +104,7 @@ See [Diagrams](diagrams.md) for sequence diagrams.
 - **Typed tokens**: `createToken<Port>('Name')`; `ProviderFactory` refuses mismatched bindings at compile time.
 - **Expected failures are values**: return `Result.err(new SomeAppError())`; throw only for the unexpected. See [Application layer](application-layer.md).
 - **Map rows in infrastructure**, never in domain; use `outFormat: OBJECT` and named columns.
+- **One thing per file**: one class, decorator or helper per file, named with its kind suffix; ESLint `max-classes-per-file` enforces the class part. See [decision 0008](../decisions/0008-one-thing-per-file.md).
 - **Barrels use named exports**: each `index.ts` lists what it exposes (`export { Foo, type Bar } from './foo'`); `export *` fails lint. See [decision 0007](../decisions/0007-named-barrel-exports.md).
 - **Pass the end user down** as `actor`/`contextUser` so Oracle sees it as `CLIENT_IDENTIFIER`.
 

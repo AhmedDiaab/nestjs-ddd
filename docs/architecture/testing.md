@@ -46,7 +46,7 @@ Every test uses **Arrange-Act-Assert** with `// Arrange`, `// Act`, `// Assert` 
 
 - `oracle.client.spec.ts`: context user set/clear/drop lifecycle, timeouts, execute defaults, error mapping, transactions.
 - `pool.manager.spec.ts`: pool creation, placeholder skipping, required-source failures, health.
-- `env-config.adapter.spec.ts`: defaults for unset env, list/bool parsing, **no secrets in errors**.
+- `load-config.spec.ts`: defaults for unset env, list/bool parsing, **no secrets in errors**.
 - `provider.factory.spec.ts`: typed-token binding checks (`@ts-expect-error`, verified by `pnpm typecheck`).
 - `app.e2e-spec.ts`: envelope, request id, health, 404, 401 without a database.
 - `tickets.int-spec.ts` (live, `example/tickets` branch): the Tickets MERGE upsert (insert and update), lookup, and filtered paging with the whitelisted `ORDER BY` against a real `tickets` table.

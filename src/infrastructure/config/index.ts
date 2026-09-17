@@ -1,9 +1,8 @@
-export {
-    type AppConfig,
-    EnvConfigAdapter,
-    InvalidConfigError,
-    loadConfig,
-} from './env-config.adapter';
+export { EnvConfigAdapter } from './env-config.adapter';
+
+export { InvalidConfigError } from './invalid-config.error';
+
+export { type AppConfig, loadConfig } from './load-config';
 
 export { ConfigPortToken } from './config.token';
 

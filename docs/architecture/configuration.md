@@ -7,12 +7,12 @@
 ```
 
 1. **Load.** `EnvConfigAdapter` calls dotenv-flow, which reads `.env`, `.env.local`, `.env.<NODE_ENV>`, `.env.<NODE_ENV>.local` from the working directory. Real environment variables win. When `NODE_ENV=test`, no files are loaded.
-2. **Hydrate.** `src/infrastructure/config/env-config.adapter.ts` maps flat env names into sections (`app`, `logging`, `http`, `database`, `jwt`) with helpers from `env.util.ts`:
+2. **Hydrate.** `src/infrastructure/config/load-config.ts` maps flat env names into sections (`app`, `logging`, `http`, `database`, `jwt`) with helpers from `env.util.ts`:
     - `envString`: blank → `undefined`, so the schema default applies
     - `envBool`: `true/false/1/0/yes/no/on/off`; anything else passes through and fails validation
     - `envList`: comma-separated → trimmed array
 3. **Validate.** Schemas in `src/infrastructure/config/schemas/` apply defaults and coercion.
-4. **Fail fast.** Invalid config throws `InvalidConfigError` listing `path: message` only (values are never printed; they may be secrets). `main.ts` prints it and exits with code 1.
+4. **Fail fast.** `loadConfig()` (`config/load-config.ts`) throws `InvalidConfigError` (`config/invalid-config.error.ts`) listing `path: message` only (values are never printed; they may be secrets). `main.ts` prints it and exits with code 1.
 5. **Read.** Inject `ConfigPortToken` and call `config.get('http.port')`, `isProduction()`, etc. Keys and value types come from the schemas: `get('http.port')` is a `number`, a misspelt key doesn't compile, and values under an optional section (`database.*`) include `undefined`. The link is type-only: `ConfigPort` declares an empty `ConfigValues` interface and `infrastructure/config/config-values.ts` merges `AppConfig` into it, so application code never imports infrastructure.
 
 Adding a variable: [Add a config variable](../guides/add-config-variable.md).

@@ -59,7 +59,7 @@ list(@Validated('query') query: ListTicketsQuery) { ... }
 - `body` and `params` are also replaced in place; **`req.query` is never assigned** (read-only in Express 5).
 - Set `async: true` in the schema options when refinements are async.
 - Alternative for single parameters: `@Body(new ZodValidationPipe(schema))`.
-- Shared schemas: `schemas/pagination.schema.ts` (`OffsetQuerySchema`, `CursorQuerySchema`, `parseOrderBy`).
+- Shared schemas: `schemas/pagination.schema.ts` (`OffsetQuerySchema`, `CursorQuerySchema`); `schemas/order-by.util.ts` (`parseOrderBy`).
 
 Keep HTTP schemas structural (types, formats, enums, ranges). Business rules (trim, max length meaning, state rules) belong to domain value objects, which return 422.
 
@@ -89,7 +89,7 @@ if (!allowed) throw new ForbiddenError('Insufficient region privileges'); // 403
 - Security schemes: `cookie-auth` and `bearer-auth` (`swagger/swagger.constants.ts`); mark routes with `@ApiBearerAuth(BEARER_SECURITY)` / `@ApiCookieAuth(COOKIE_SECURITY)`.
 - Group endpoints with `@ApiTags`; hide internal controllers with `@ApiExcludeController()`.
 - **Inputs come from the Zod schemas.** `@UseZodHttp({ body, query, params, headers })` on a method also adds the Swagger request body, one query/path parameter or header per schema property (type, constraints, defaults, enums, `.describe()` text, required flags). There are no DTO classes to keep in sync. Generation uses Zod's `z.toJSONSchema` with the OpenAPI 3.0 target (`swagger/zod-openapi.ts`).
-- **Responses:** add `@ZodResponse(status, schema)` to document `data` inside the `{ success: true, data, meta }` envelope. Errors use the envelope in [Response envelope](#response-envelope).
+- **Responses:** add `@ZodResponse(status, schema)` (`swagger/zod-response.decorator.ts`) to document `data` inside the `{ success: true, data, meta }` envelope. Errors use the envelope in [Response envelope](#response-envelope).
 
 ## Versioning
 
