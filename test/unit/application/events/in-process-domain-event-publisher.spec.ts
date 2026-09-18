@@ -1,6 +1,7 @@
 import { InProcessDomainEventPublisher, type DomainEventHandler } from '@application/events';
-import type { LoggerPort } from '@application/ports';
+import type { LoggerPort, MetricsPort } from '@application/ports';
 import type { DomainEvent } from '@domain';
+import { Metrics } from '@shared/metrics';
 
 type Opened = DomainEvent & { name: 'Opened'; id: string };
 type Closed = DomainEvent & { name: 'Closed'; id: string };
@@ -23,6 +24,8 @@ function recordingHandler<E extends DomainEvent>(eventName: E['name'], calls: st
 describe('InProcessDomainEventPublisher', () => {
     const error = jest.fn();
     const logger: LoggerPort = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error };
+    const increment = jest.fn();
+    const metrics: MetricsPort = { increment, observe: jest.fn(), setGauge: jest.fn() };
 
     afterEach(() => jest.clearAllMocks());
 
@@ -32,6 +35,7 @@ describe('InProcessDomainEventPublisher', () => {
         const sut = new InProcessDomainEventPublisher(
             [recordingHandler('Closed', calls), recordingHandler('Opened', calls)],
             logger,
+            metrics,
         );
 
         // Act
@@ -41,7 +45,25 @@ describe('InProcessDomainEventPublisher', () => {
         expect(calls).toEqual(['Opened:Opened', 'Closed:Closed']);
     });
 
-    it('logs a failing handler and still runs the others', async () => {
+    it('counts a successful dispatch', async () => {
+        // Arrange
+        const calls: string[] = [];
+        const sut = new InProcessDomainEventPublisher(
+            [recordingHandler('Opened', calls)],
+            logger,
+            metrics,
+        );
+
+        // Act
+        await sut.publish([opened]);
+
+        // Assert
+        expect(increment).toHaveBeenCalledWith(Metrics.domainEventsPublished, {
+            event: 'Opened',
+        });
+    });
+
+    it('logs and counts a failing handler, and still runs the others', async () => {
         // Arrange
         const calls: string[] = [];
         const failing: DomainEventHandler = {
@@ -51,6 +73,7 @@ describe('InProcessDomainEventPublisher', () => {
         const sut = new InProcessDomainEventPublisher(
             [failing, recordingHandler('Opened', calls)],
             logger,
+            metrics,
         );
 
         // Act
@@ -63,11 +86,17 @@ describe('InProcessDomainEventPublisher', () => {
             'domain.event.handler.failed',
             expect.objectContaining({ event: 'Opened' }),
         );
+        expect(increment).toHaveBeenCalledWith(Metrics.domainEventHandlerFailures, {
+            event: 'Opened',
+        });
+        expect(increment).toHaveBeenCalledWith(Metrics.domainEventsPublished, {
+            event: 'Opened',
+        });
     });
 
     it('ignores events nobody handles', async () => {
         // Arrange
-        const sut = new InProcessDomainEventPublisher([], logger);
+        const sut = new InProcessDomainEventPublisher([], logger, metrics);
 
         // Act
         const publish = sut.publish([opened]);
@@ -75,5 +104,6 @@ describe('InProcessDomainEventPublisher', () => {
         // Assert
         await expect(publish).resolves.toBeUndefined();
         expect(error).not.toHaveBeenCalled();
+        expect(increment).not.toHaveBeenCalled();
     });
 });

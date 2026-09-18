@@ -50,6 +50,14 @@ export class PrometheusMetrics implements MetricsPort, MetricsScrapePort {
         this.counter(Metrics.jobRuns, 'Scheduled job runs', ['job', 'outcome']);
         this.histogram(Metrics.jobDuration, 'Time of a scheduled job run', ['job']);
         this.gauge(Metrics.dbPoolConnections, 'Database pool connections', ['source', 'state']);
+        this.counter(Metrics.domainEventsPublished, 'Domain events dispatched to their handlers', [
+            'event',
+        ]);
+        this.counter(
+            Metrics.domainEventHandlerFailures,
+            'Domain event handlers that threw instead of completing',
+            ['event'],
+        );
     }
 
     increment(name: string, labels: MetricLabels = {}, value = 1): void {

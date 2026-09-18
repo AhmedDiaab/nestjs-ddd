@@ -6,7 +6,9 @@ import {
 import {
     DomainEventPublisherPortToken,
     LoggerPortToken,
+    MetricsPortToken,
     type LoggerPort,
+    type MetricsPort,
 } from '@application/ports';
 import { GetDatabaseInfoUseCase } from '@application/use-cases';
 import { ProviderFactory } from '@common/factories';
@@ -30,9 +32,9 @@ const eventHandlers: (new (...args: never[]) => DomainEventHandler)[] = [];
         ),
         ProviderFactory.factory(
             DomainEventPublisherPortToken,
-            (handlers: readonly DomainEventHandler[], logger: LoggerPort) =>
-                new InProcessDomainEventPublisher(handlers, logger),
-            [DomainEventHandlersToken, LoggerPortToken],
+            (handlers: readonly DomainEventHandler[], logger: LoggerPort, metrics: MetricsPort) =>
+                new InProcessDomainEventPublisher(handlers, logger, metrics),
+            [DomainEventHandlersToken, LoggerPortToken, MetricsPortToken],
         ),
     ],
     exports: [GetDatabaseInfoUseCase, DomainEventPublisherPortToken],

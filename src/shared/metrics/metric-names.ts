@@ -12,6 +12,8 @@ export const Metrics = {
     jobRuns: 'scheduled_job_runs_total',
     jobDuration: 'scheduled_job_duration_seconds',
     dbPoolConnections: 'database_pool_connections',
+    domainEventsPublished: 'domain_events_published_total',
+    domainEventHandlerFailures: 'domain_event_handler_failures_total',
 } as const;
 
 export type MetricName = (typeof Metrics)[keyof typeof Metrics];
