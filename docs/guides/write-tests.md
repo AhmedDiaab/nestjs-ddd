@@ -410,12 +410,12 @@ Boot the real `AppModule`, override ports with fakes, sign a JWT.
 import { TicketQueryPortToken } from '@application/ports';
 import { TicketRepositoryToken } from '@domain';
 import { VersioningType, type INestApplication } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { InMemoryTickets } from '../fakes/in-memory-tickets';
+import { signJwt } from '../fakes/sign-jwt';
 
 const SECRET = 'e2e-secret-that-is-at-least-32-chars';
 
@@ -444,7 +444,7 @@ describe('Tickets API (e2e, in-memory persistence)', () => {
         app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
         await app.init();
 
-        token = new JwtService({ secret: SECRET }).sign({ username: 'alice', id: '1' });
+        token = signJwt({ username: 'alice', id: '1' }, SECRET);
     });
 
     afterAll(() => app.close());
@@ -566,7 +566,8 @@ Notes:
 
 - Set env **before** `compile()`; config is validated when the module is built.
 - `main.ts` isn't executed: enable versioning (and anything else you need from it) in the test.
-- `@nestjs/jwt` is only used here to sign test tokens; the app verifies through passport-jwt.
+- `signJwt` (`test/fakes/sign-jwt.ts`) signs the token with `node:crypto`: the app only verifies
+  tokens, through passport-jwt, so no JWT library is a dependency of this template.
 
 ## Real database
 

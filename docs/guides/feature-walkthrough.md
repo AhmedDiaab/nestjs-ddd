@@ -3,7 +3,7 @@
 Builds a complete feature through every layer. Each step links to a focused guide with the full code. The finished code (compiled, linted and tested against this template) is on the `example/tickets` branch:
 
 ```bash
-git diff feat/oracle-backport..example/tickets --stat
+git diff main..example/tickets --stat
 ```
 
 ## What we build
