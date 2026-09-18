@@ -68,6 +68,48 @@ describe('runGracefulShutdown', () => {
         expect(steps).toEqual(['closeIdleConnections', 'server.close', 'app.close']);
     });
 
+    it('drains in-flight jobs after the server closes and before the pools do', async () => {
+        // Arrange
+        const steps: Recorded = [];
+
+        // Act
+        await runGracefulShutdown({
+            signal: 'SIGTERM',
+            server: serverThatCloses(steps),
+            shutdown: new ShutdownState(),
+            logger,
+            drainDelayMs: 0,
+            forceAfterMs: 50,
+            closeApp: () => Promise.resolve(void steps.push('app.close')),
+            drainJobs: () => Promise.resolve(void steps.push('drain.jobs')),
+            delay: () => Promise.resolve(),
+        });
+
+        // Assert
+        expect(steps).toEqual(['closeIdleConnections', 'server.close', 'drain.jobs', 'app.close']);
+    });
+
+    it('completes without a drainJobs option', async () => {
+        // Arrange
+        const steps: Recorded = [];
+
+        // Act
+        const finished = await runGracefulShutdown({
+            signal: 'SIGTERM',
+            server: serverThatCloses(steps),
+            shutdown: new ShutdownState(),
+            logger,
+            drainDelayMs: 0,
+            forceAfterMs: 50,
+            closeApp: () => Promise.resolve(void steps.push('app.close')),
+            delay: () => Promise.resolve(),
+        });
+
+        // Assert
+        expect(finished).toBe(true);
+        expect(steps).toEqual(['closeIdleConnections', 'server.close', 'app.close']);
+    });
+
     it('waits the configured drain delay before closing anything', async () => {
         // Arrange
         const waited: number[] = [];

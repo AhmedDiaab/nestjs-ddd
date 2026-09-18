@@ -19,6 +19,8 @@ export type GracefulShutdownOptions = {
     forceAfterMs: number;
     /** Nest's `app.close()`: destroy hooks, database pools. */
     closeApp: () => Promise<void>;
+    /** Waits for any in-flight cron job before the pools close. Omit it if there is no scheduler. */
+    drainJobs?: () => Promise<void>;
     delay?: (ms: number) => Promise<void>;
 };
 
@@ -29,10 +31,11 @@ export type GracefulShutdownOptions = {
  * 2. keep serving for `drainDelayMs` — the monitor needs a poll or two to notice;
  * 3. stop accepting connections and let in-flight requests finish;
  * 4. cut whatever is still open after `forceAfterMs`;
- * 5. close the application (database pools) once nothing is being served.
+ * 5. wait for `drainJobs` — an in-flight cron job still needs the database;
+ * 6. close the application (database pools) once nothing is being served.
  *
  * Closing pools first — which is what happens when Nest's own signal handling runs alone —
- * fails the requests that are still in flight.
+ * fails the requests and jobs that are still in flight.
  */
 export async function runGracefulShutdown({
     signal,
@@ -42,6 +45,7 @@ export async function runGracefulShutdown({
     drainDelayMs,
     forceAfterMs,
     closeApp,
+    drainJobs,
     delay = sleep,
 }: GracefulShutdownOptions): Promise<boolean> {
     if (!shutdown.begin()) {
@@ -63,6 +67,8 @@ export async function runGracefulShutdown({
     server.closeIdleConnections?.();
     await new Promise<void>((resolve) => server.close(() => resolve()));
     clearTimeout(forceTimer);
+
+    if (drainJobs) await drainJobs();
 
     await closeApp();
     logger.info('shutdown.finished', { signal });

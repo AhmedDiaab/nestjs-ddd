@@ -120,6 +120,7 @@ function hydrate() {
         shutdown: {
             drainDelayMs: envString(env.SHUTDOWN_DRAIN_DELAY_MS),
             forceAfterMs: envString(env.SHUTDOWN_FORCE_AFTER_MS),
+            jobDrainMs: envString(env.SHUTDOWN_JOB_DRAIN_MS),
         },
     };
 }

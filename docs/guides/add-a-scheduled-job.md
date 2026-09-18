@@ -71,11 +71,11 @@ Off by default on purpose: **every instance with it on runs every job**. With se
 - **Make runs idempotent.** A job can run twice: after a restart, or when two instances have the scheduler on by mistake.
 - **Keep them short.** Long jobs block their own next run; for heavy work, process in batches and let the next run continue.
 - **No HTTP concerns**: no envelope, no HTTP errors. Throw and let it be logged.
-- **Shutdown**: a run in progress is not awaited on SIGTERM. Write jobs so an interrupted run can be repeated safely.
+- **Shutdown**: on SIGTERM, `JobScheduler.stop()` waits up to `SHUTDOWN_JOB_DRAIN_MS` (default 10s) for a run in progress before the database pools close. Past that it logs `scheduler.drain.timeout` and closes anyway, so still write jobs that can be repeated safely if a drain times out.
 - **One job per file**, named `<name>.job.ts` ([decision 0008](../decisions/0008-one-thing-per-file.md)).
 
 ## Test it
 
 - **The job**: unit-test `run()` with a fake or stubbed use case; assert what it passes and that failures throw.
-- **The wiring**: `JobRunner` and `JobScheduler` are already covered in `test/unit/interface/scheduler` (failures swallowed, overlapping runs skipped, jobs registered only when enabled).
+- **The wiring**: `JobRunner` and `JobScheduler` are already covered in `test/unit/interface/scheduler` (failures swallowed, overlapping runs skipped, jobs registered only when enabled, in-flight runs drained on shutdown).
 - Don't test cron expressions by waiting: call `run()` directly.

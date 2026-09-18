@@ -27,8 +27,10 @@ param(
     # Defaults to the node.exe found on PATH
     [string]$NodePath,
 
-    # Time NSSM waits after Ctrl+C before killing Node. Keep above the database drainTimeSec.
-    [int]$StopTimeoutMs = 15000
+    # Time NSSM waits after Ctrl+C before killing Node.
+    # Must be >= drainDelayMs + forceAfterMs + jobDrainMs + slack (the SHUTDOWN_* env vars), or a
+    # slow drain gets SIGKILLed mid-shutdown instead of finishing cleanly.
+    [int]$StopTimeoutMs = 30000
 )
 
 $ErrorActionPreference = "Stop"

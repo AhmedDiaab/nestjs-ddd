@@ -89,7 +89,7 @@ Test-Case "start: fresh install configures and starts the service" {
     Assert-True (-not ($r.Calls -match '^(stop|remove) ')) "stopped/removed a service that did not exist"
     Assert-True (@($r.Calls -match "^install NestjsDddApiService .*node .*dist[\\/]main\.js$").Count -eq 1) "no install with node + dist\main.js: $($r.Calls -join ' | ')"
     Assert-True ($r.Calls -contains "set NestjsDddApiService AppEnvironmentExtra NODE_ENV=staging") "NODE_ENV not set to staging"
-    Assert-True ($r.Calls -contains "set NestjsDddApiService AppStopMethodConsole 15000") "graceful stop timeout not set"
+    Assert-True ($r.Calls -contains "set NestjsDddApiService AppStopMethodConsole 30000") "graceful stop timeout not set"
     Assert-True ($r.Calls -contains "set NestjsDddApiService AppExit Default Restart") "restart policy not set"
     Assert-True ($r.Calls[-2] -eq "start NestjsDddApiService") "service not started last: $($r.Calls[-2])"
     Assert-True (-not ($r.Calls -match 'JWT_SECRET|PASSWORD')) "secrets passed to nssm"

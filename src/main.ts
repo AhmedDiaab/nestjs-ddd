@@ -4,6 +4,7 @@ import { ConfigPortToken, LoggerPortToken, ShutdownPortToken } from '@applicatio
 import { InvalidConfigError } from '@infrastructure/config';
 import { runGracefulShutdown } from '@infrastructure/lifecycle';
 import { setupSwagger } from '@interface/http/swagger';
+import { JobScheduler } from '@interface/scheduler';
 import { VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -83,6 +84,7 @@ function installShutdownHandlers(
 ): void {
     const shutdown = app.get<ShutdownPort>(ShutdownPortToken);
     const logger = app.get<LoggerPort>(LoggerPortToken);
+    const scheduler = app.get(JobScheduler);
 
     for (const signal of ['SIGTERM', 'SIGINT'] as const) {
         process.on(signal, () => {
@@ -93,6 +95,7 @@ function installShutdownHandlers(
                 logger,
                 drainDelayMs: config.get('shutdown.drainDelayMs'),
                 forceAfterMs: config.get('shutdown.forceAfterMs'),
+                drainJobs: () => scheduler.stop(config.get('shutdown.jobDrainMs')),
                 closeApp: () => app.close(),
             });
         });

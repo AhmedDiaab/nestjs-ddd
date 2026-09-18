@@ -7,7 +7,8 @@ import type { ScheduledJob } from './scheduled-job';
  * skips a run while the previous one is still going, and logs start, duration and failures.
  */
 export class JobRunner {
-    private running = false;
+    /** The in-flight run, so shutdown can wait for it. `undefined` means idle. */
+    private current: Promise<void> | undefined;
 
     constructor(
         private readonly job: ScheduledJob,
@@ -16,7 +17,7 @@ export class JobRunner {
     ) {}
 
     async run(): Promise<void> {
-        if (this.running) {
+        if (this.current) {
             this.logger.warn('scheduler.job.skipped', {
                 job: this.job.name,
                 reason: 'still running',
@@ -25,8 +26,26 @@ export class JobRunner {
             return;
         }
 
-        this.running = true;
-        const started = Date.now();
+        this.current = this.execute(Date.now()).finally(() => {
+            this.current = undefined;
+        });
+        await this.current;
+    }
+
+    /** Whether a run is in flight — shutdown uses this to name a job still draining. */
+    get isRunning(): boolean {
+        return this.current !== undefined;
+    }
+
+    /**
+     * Resolves immediately when idle, otherwise waits for the run in progress. Never rejects:
+     * `execute` already swallows job failures, so the stored promise never does either.
+     */
+    async whenIdle(): Promise<void> {
+        await this.current;
+    }
+
+    private async execute(started: number): Promise<void> {
         try {
             await this.job.run();
             this.logger.info('scheduler.job.finished', {
@@ -41,8 +60,6 @@ export class JobRunner {
                 err,
             });
             this.record('failed', started);
-        } finally {
-            this.running = false;
         }
     }
 

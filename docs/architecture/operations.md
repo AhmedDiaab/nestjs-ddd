@@ -130,17 +130,18 @@ Per-source detail moved behind a token: `GET /v1/health/sources` (subject to the
 
 On `SIGTERM`/`SIGINT` (Ctrl+C) the process shuts down in the order a load balancer expects:
 
-| Step | What happens                                                                 | Why                                                                                        |
-| ---- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| 1    | `/health/ready` starts answering **503 `SHUTTING_DOWN`**                     | the load balancer stops routing here while the instance can still serve                    |
-| 2    | it keeps serving for `SHUTDOWN_DRAIN_DELAY_MS` (default 5s)                  | a monitor needs a poll or two to notice; closing the port first turns requests into errors |
-| 3    | the server stops accepting connections; in-flight requests finish            | idle keep-alive sockets are closed so they don't hold the server open                      |
-| 4    | after `SHUTDOWN_FORCE_AFTER_MS` (default 10s), remaining connections are cut | one stuck request must not keep the process alive forever                                  |
-| 5    | the application closes: database pools drain with `drainTimeSec`             | pools outlive the requests using them                                                      |
+| Step | What happens                                                                                      | Why                                                                                        |
+| ---- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 1    | `/health/ready` starts answering **503 `SHUTTING_DOWN`**                                          | the load balancer stops routing here while the instance can still serve                    |
+| 2    | it keeps serving for `SHUTDOWN_DRAIN_DELAY_MS` (default 5s)                                       | a monitor needs a poll or two to notice; closing the port first turns requests into errors |
+| 3    | the server stops accepting connections; in-flight requests finish                                 | idle keep-alive sockets are closed so they don't hold the server open                      |
+| 4    | after `SHUTDOWN_FORCE_AFTER_MS` (default 10s), remaining connections are cut                      | one stuck request must not keep the process alive forever                                  |
+| 5    | `JobScheduler.stop()` waits up to `SHUTDOWN_JOB_DRAIN_MS` (default 10s) for an in-flight cron job | it still needs the database pools the next step closes                                     |
+| 6    | the application closes: database pools drain with `drainTimeSec`                                  | pools outlive the requests and jobs using them                                             |
 
 `GET /health` stays **200** the whole time: a liveness probe that fails during shutdown gets the process killed in the middle of the requests it is trying to finish.
 
-Set the stop grace period of whatever runs the process (Kubernetes `terminationGracePeriodSeconds`, Docker `--stop-timeout`, NSSM) **above** `SHUTDOWN_DRAIN_DELAY_MS + SHUTDOWN_FORCE_AFTER_MS + drainTimeSec`, or it will `SIGKILL` in the middle of the sequence.
+Set the stop grace period of whatever runs the process (Kubernetes `terminationGracePeriodSeconds`, Docker `--stop-timeout`, NSSM) **above** `SHUTDOWN_DRAIN_DELAY_MS + SHUTDOWN_FORCE_AFTER_MS + SHUTDOWN_JOB_DRAIN_MS + drainTimeSec`, or it will `SIGKILL` in the middle of the sequence.
 
 Sizing the drain delay: it must exceed the load balancer's health-check interval × unhealthy threshold. A monitor polling every 5 seconds needing 2 failures needs more than 10 seconds, not the 5 second default.
 
@@ -154,7 +155,7 @@ Cron jobs live in `src/interface/scheduler` and run inside the API process, off 
 - The worker can stay in the pool (it still serves HTTP) or be taken out of it; either way its `/health` must answer for the monitor.
 - Failures are logged as `scheduler.job.failed` and never stop the process; overlapping runs are skipped (`scheduler.job.skipped`). Alert on those two events.
 - Startup logs one `scheduler.job.scheduled` per job with its next run; `scheduler.disabled` means the switch is off.
-- On shutdown a run in progress is not awaited, so jobs must be safe to repeat.
+- On shutdown, `JobScheduler.stop()` stops new runs immediately and waits up to `SHUTDOWN_JOB_DRAIN_MS` (default 10s) for one already in flight. Past that it logs `scheduler.drain.timeout` and the process keeps closing, so jobs must still be safe to repeat.
 - Writing one: [Add a scheduled job](../guides/add-a-scheduled-job.md).
 
 ## Windows service (NSSM)

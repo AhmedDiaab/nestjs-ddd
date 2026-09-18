@@ -75,8 +75,9 @@ Adding a variable: [Add a config variable](../guides/add-config-variable.md).
 | ------------------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
 | `SHUTDOWN_DRAIN_DELAY_MS` | `5000`  | readiness fails for this long before the server closes; set it above the load balancer's interval × threshold |
 | `SHUTDOWN_FORCE_AFTER_MS` | `10000` | in-flight requests get this long, then their connections are cut                                              |
+| `SHUTDOWN_JOB_DRAIN_MS`   | `10000` | an in-flight cron job gets this long to finish before the database pools close                                |
 
-The process manager's stop grace period must exceed both, plus the pool `drainTimeSec` ([Operations → Graceful shutdown](operations.md#graceful-shutdown)).
+The process manager's stop grace period must exceed all three, plus the pool `drainTimeSec` ([Operations → Graceful shutdown](operations.md#graceful-shutdown)).
 
 ### Outbound HTTP
 
