@@ -1,6 +1,6 @@
 import type { ConfigPort, LoggerPort, MetricsPort, RequestContextPort } from '@application/ports';
+import { delay } from '@common/utils';
 import { formatTraceparent, newSpanId } from '@infrastructure/context';
-import { delay } from '@infrastructure/database/utils';
 import { Metrics } from '@infrastructure/metrics';
 import { CircuitBreaker } from './circuit-breaker';
 import type { HttpClient, HttpRequest, HttpResponse } from './contracts';

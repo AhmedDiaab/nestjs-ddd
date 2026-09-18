@@ -1,5 +1,5 @@
 import type { LoggerPort, ShutdownPort } from '@application/ports';
-import { delay as sleep } from '@infrastructure/database/utils';
+import { delay as sleep } from '@common/utils';
 
 /** The parts of `http.Server` shutdown needs; keeps this testable without a socket. */
 export type ClosableServer = {

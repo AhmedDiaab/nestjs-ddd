@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { LoggerPort } from '@application/ports';
 import { LoggerPortToken } from '@application/ports';
+import { delay } from '@common/utils';
 import type { DatabaseConfig, DatabaseSource } from '@infrastructure/config/schemas';
 import {
     initOracleDriver,
@@ -21,7 +22,7 @@ import {
     type DbHealthFailure,
 } from '@infrastructure/database/errors';
 import type { ConnectionOptions, PoolStats } from '@infrastructure/database/types';
-import { delay, expoBackoff, jitterDelay, Semaphore } from '@infrastructure/database/utils';
+import { expoBackoff, jitterDelay, Semaphore } from '@infrastructure/database/utils';
 import { Inject, Injectable, type OnModuleDestroy } from '@nestjs/common';
 import oracledb from 'oracledb';
 
