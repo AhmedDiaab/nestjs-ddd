@@ -1,5 +1,10 @@
-import type { ConfigPort, DatabaseHealthPort, ShutdownPort } from '@application/ports';
-import { ConfigPortToken, DatabaseHealthPortToken, ShutdownPortToken } from '@application/ports';
+import type { ConfigPort, DatabaseHealthPort, LoggerPort, ShutdownPort } from '@application/ports';
+import {
+    ConfigPortToken,
+    DatabaseHealthPortToken,
+    LoggerPortToken,
+    ShutdownPortToken,
+} from '@application/ports';
 import { Public } from '@interface/http/decorators';
 import {
     Controller,
@@ -20,6 +25,7 @@ export class HealthController {
         @Inject(DatabaseHealthPortToken) private readonly databaseHealth: DatabaseHealthPort,
         @Inject(ConfigPortToken) private readonly config: ConfigPort,
         @Inject(ShutdownPortToken) private readonly shutdown: ShutdownPort,
+        @Inject(LoggerPortToken) private readonly logger: LoggerPort,
     ) {}
 
     /**
@@ -31,7 +37,13 @@ export class HealthController {
         return { status: 'ok' };
     }
 
-    /** Readiness: every implemented database source answers a ping. */
+    /**
+     * Readiness: every implemented database source answers a ping. The body carries nothing
+     * beyond `status`: which sources are down, on what dialect and why, is diagnostic detail
+     * an anonymous caller has no business seeing. The same detail is one `GET
+     * /v1/health/sources` away for anyone holding the `admin` role, and every failing source is
+     * logged here at `warn` for anyone with the application log.
+     */
     @Get('ready')
     async ready() {
         // draining: tell the load balancer to stop routing here before the port closes
@@ -43,21 +55,13 @@ export class HealthController {
         }
 
         const timeoutMs = this.config.get('database.health.timeoutMs') ?? 3000;
-        const hideErrors = this.config.isProduction();
+        const sources = await this.databaseHealth.check(timeoutMs);
+        const failing = sources.filter((s) => s.implemented && !s.ok);
 
-        const sources = (await this.databaseHealth.check(timeoutMs)).map((source) => ({
-            ...source,
-            error: hideErrors ? undefined : source.error,
-        }));
-        const ok = sources.filter((s) => s.implemented).every((s) => s.ok);
-
-        if (!ok) {
-            throw new ServiceUnavailableException({
-                message: 'Not ready',
-                code: 'NOT_READY',
-                details: sources,
-            });
+        if (failing.length > 0) {
+            this.logger.warn('health.ready.failed', { sources: failing });
+            throw new ServiceUnavailableException({ message: 'Not ready', code: 'NOT_READY' });
         }
-        return { status: 'ok', sources };
+        return { status: 'ok' };
     }
 }

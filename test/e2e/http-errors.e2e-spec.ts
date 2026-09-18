@@ -2,16 +2,31 @@ import { ConnectionProviderToken } from '@infrastructure/database/connection';
 import type { SourceHealth } from '@infrastructure/database/contracts';
 import { Public, UseZodHttp, Validated } from '@interface/http/decorators';
 import { Controller, Get, VersioningType, type INestApplication } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { z } from 'zod';
 
+const SECRET = 'e2e-secret-that-is-at-least-32-chars';
+
+const adminToken = () =>
+    new JwtService({ secret: SECRET }).sign({
+        id: 'u-1',
+        username: 'alice',
+        admin: false,
+        email: 'alice@example.com',
+        name: 'Alice',
+        roles: ['admin'],
+    });
+
 type ErrorEnvelope = {
     success: false;
     error: { message: string; code?: string; details?: unknown };
 };
+
+type SuccessEnvelope = { success: true; data: unknown };
 
 /** Test-only route: the template ships no validated endpoint of its own. */
 @Public() // authentication is global; this probe is about validation, not auth
@@ -32,7 +47,7 @@ describe('HTTP error responses (e2e)', () => {
     beforeAll(async () => {
         Object.assign(process.env, {
             NODE_ENV: 'test',
-            JWT_SECRET: 'e2e-secret-that-is-at-least-32-chars',
+            JWT_SECRET: SECRET,
             LOGGING_TO_FILE: 'false',
             LOG_LEVEL: 'error',
         });
@@ -57,7 +72,7 @@ describe('HTTP error responses (e2e)', () => {
         health.length = 0;
     });
 
-    it('GET /health/ready returns 503 with per-source status when a database source is down', async () => {
+    it('GET /health/ready returns 503 with no source detail when a database source is down', async () => {
         // Arrange
         health.push({
             sourceKey: 'main',
@@ -75,7 +90,38 @@ describe('HTTP error responses (e2e)', () => {
         expect(res.status).toBe(503);
         expect(res.body as ErrorEnvelope).toMatchObject({
             success: false,
-            error: { code: 'NOT_READY', details: [{ key: 'main', ok: false }] },
+            error: { message: 'Not ready', code: 'NOT_READY' },
+        });
+        expect((res.body as ErrorEnvelope).error.details).toBeUndefined();
+    });
+
+    it('GET /v1/health/sources still shows the failing source, for an admin token', async () => {
+        // Arrange
+        health.push({
+            sourceKey: 'main',
+            dialect: 'oracle',
+            implemented: true,
+            ok: false,
+            latencyMs: 3000,
+            error: 'NJS-503: connection refused',
+        });
+        const call = request(app.getHttpServer())
+            .get('/v1/health/sources')
+            .set('Authorization', `Bearer ${adminToken()}`);
+
+        // Act
+        const res = await call;
+
+        // Assert
+        expect(res.status).toBe(200);
+        expect((res.body as SuccessEnvelope).data).toEqual({
+            sources: [
+                expect.objectContaining({
+                    key: 'main',
+                    ok: false,
+                    error: 'NJS-503: connection refused',
+                }),
+            ],
         });
     });
 

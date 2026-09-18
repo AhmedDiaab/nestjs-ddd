@@ -1,6 +1,7 @@
 import type {
     ConfigPort,
     DatabaseHealthPort,
+    LoggerPort,
     ShutdownPort,
     SourceHealthView,
 } from '@application/ports';
@@ -17,24 +18,21 @@ const source = (overrides: Partial<SourceHealthView>): SourceHealthView => ({
 });
 
 describe('HealthController', () => {
-    const createController = (
-        sources: SourceHealthView[],
-        production = false,
-        draining = false,
-    ) => {
+    const createController = (sources: SourceHealthView[], draining = false) => {
         const databaseHealth = { check: jest.fn(() => Promise.resolve(sources)) };
-        const config = {
-            get: () => 1000,
-            isProduction: () => production,
-        } as unknown as ConfigPort;
+        const config = { get: () => 1000 } as unknown as ConfigPort;
         const shutdown: ShutdownPort = { isShuttingDown: () => draining, begin: () => true };
+        const warn = jest.fn();
+        const logger = { debug: jest.fn(), info: jest.fn(), warn, error: jest.fn() };
         return {
             controller: new HealthController(
                 databaseHealth as unknown as DatabaseHealthPort,
                 config,
                 shutdown,
+                logger as unknown as LoggerPort,
             ),
             databaseHealth,
+            warn,
         };
     };
 
@@ -68,11 +66,11 @@ describe('HealthController', () => {
         const result = await controller.ready();
 
         // Assert
-        expect(result.status).toBe('ok');
+        expect(result).toEqual({ status: 'ok' });
         expect(databaseHealth.check).toHaveBeenCalledWith(1000);
     });
 
-    it('throws 503 NOT_READY with per-source details when a source is down', async () => {
+    it('throws 503 NOT_READY with no body detail when a source is down', async () => {
         // Arrange
         const down = source({ ok: false, error: 'NJS-503: connection refused' });
         const { controller } = createController([down]);
@@ -83,32 +81,26 @@ describe('HealthController', () => {
         // Assert
         expect(error).toBeInstanceOf(ServiceUnavailableException);
         expect(error.getStatus()).toBe(503);
-        expect(error.getResponse()).toMatchObject({
-            code: 'NOT_READY',
-            details: [expect.objectContaining({ key: 'main', ok: false })],
-        });
+        expect(error.getResponse()).toEqual({ message: 'Not ready', code: 'NOT_READY' });
     });
 
-    it('hides source error text in production', async () => {
+    it('logs the failing sources at warn, so the detail still reaches the operator', async () => {
         // Arrange
         const down = source({ ok: false, error: 'NJS-503: connection refused' });
-        const { controller } = createController([down], true);
+        const { controller, warn } = createController([down]);
 
         // Act
-        const error = await readyError(controller);
+        await readyError(controller);
 
         // Assert
-        const { details } = error.getResponse() as { details: SourceHealthView[] };
-        expect(details[0].error).toBeUndefined();
+        expect(warn).toHaveBeenCalledWith('health.ready.failed', {
+            sources: [expect.objectContaining({ key: 'main', ok: false })],
+        });
     });
 
     it('fails readiness while the process is shutting down, before dependencies are touched', async () => {
         // Arrange: draining, database still perfectly healthy
-        const { controller, databaseHealth } = createController(
-            [source({ ok: true })],
-            false,
-            true,
-        );
+        const { controller, databaseHealth } = createController([source({ ok: true })], true);
 
         // Act
         const error = await readyError(controller);
@@ -121,7 +113,7 @@ describe('HealthController', () => {
 
     it('keeps liveness green while draining, so the process is not killed mid-request', () => {
         // Arrange
-        const { controller } = createController([], false, true);
+        const { controller } = createController([], true);
 
         // Act
         const body = controller.live();

@@ -7,6 +7,7 @@ import { ResponseFormatterInterceptor } from '@interface/http/common/interceptor
 import {
     DatabaseInfoController,
     HealthController,
+    HealthSourcesController,
     MetricsController,
 } from '@interface/http/controllers';
 import { ZodHttpInterceptor } from '@interface/http/interceptors/zod-http.interceptor';
@@ -23,6 +24,7 @@ describe('InterfaceModule composition', () => {
         // Arrange
         const expected = [
             HealthController,
+            HealthSourcesController,
             MetricsController,
             DatabaseInfoController,
             FallbackController,

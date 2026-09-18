@@ -63,7 +63,8 @@ docker compose --env-file .env.docker up --build
 - `.env.docker` is gitignored; only `.env.docker.example` is committed.
 - The app schema is empty: create your tables as the app user (e.g. `sql app/<password>@localhost:1521/FREEPDB1`), or mount SQL into the Oracle container's `/container-entrypoint-initdb.d`.
 - Check it's running:
-    - `GET http://localhost:3000/health/ready` should list `main` with `ok: true`.
+    - `GET http://localhost:3000/health/ready` should answer `{"status":"ok"}`.
+    - `GET /v1/health/sources` with a JWT carrying the `admin` role should list `main` with `ok: true`.
     - `GET /v1/database-info` with a JWT shows the `CLIENT_IDENTIFIER` the database saw.
 - Reset the database: `docker compose --env-file .env.docker down -v` (deletes the volume).
 
@@ -73,10 +74,10 @@ This stack is for local development and integration testing, not a production de
 
 For uptime monitors, load balancers and orchestrators. No auth, not rate limited, version neutral, successful polls not logged.
 
-| Endpoint            | 200 when                                                                                                           | Failure                                                                                                |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `GET /health`       | the process accepts HTTP                                                                                           | no response                                                                                            |
-| `GET /health/ready` | every implemented DB source answers a ping within `DATABASE_PING_TIMEOUT_MS`, and the process is not shutting down | **503** with per-source `details` (error text hidden in production), or `SHUTTING_DOWN` while draining |
+| Endpoint            | 200 when                                                                                                           | Failure                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `GET /health`       | the process accepts HTTP                                                                                           | no response                                                             |
+| `GET /health/ready` | every implemented DB source answers a ping within `DATABASE_PING_TIMEOUT_MS`, and the process is not shutting down | **503** `NOT_READY` (no body detail), or `SHUTTING_DOWN` while draining |
 
 Monitoring tools should check the **status code**. Pick the endpoint by what "down" means for you:
 
@@ -85,25 +86,35 @@ Monitoring tools should check the **status code**. Pick the endpoint by what "do
 
 A load balancer pool member should be checked with `/health/ready`, so a draining instance is taken out before it stops listening. A container **liveness** probe should use `/health`, so a brief database blip — or a shutdown in progress — doesn't get the process restarted.
 
+`/health/ready` used to publish every configured source key, its dialect, latency and (outside production) the driver error text to anyone who could reach the port. It now answers only `{"status": "ok"}` or a bare `NOT_READY`; the failing sources are logged at `warn` as `health.ready.failed` instead.
+
 Response (`/health/ready`):
 
 ```json
 {
     "success": true,
+    "data": { "status": "ok" },
+    "meta": { "timestamp": "...", "path": "/health/ready", "requestId": "..." }
+}
+```
+
+Per-source detail moved behind a token: `GET /v1/health/sources` (subject to the global `JwtGuard`, requires the `admin` role — see [Add an auth strategy](../guides/add-an-auth-strategy.md)). Same data as before, `error` included:
+
+```json
+{
+    "success": true,
     "data": {
-        "status": "ok",
         "sources": [
             {
-                "sourceKey": "main",
+                "key": "main",
                 "dialect": "oracle",
                 "implemented": true,
                 "ok": true,
-                "latencyMs": 4,
-                "pool": { "connectionsOpen": 2, "connectionsInUse": 0, "poolMin": 2, "poolMax": 10 }
+                "latencyMs": 4
             }
         ]
     },
-    "meta": { "timestamp": "...", "path": "/health/ready", "requestId": "..." }
+    "meta": { "timestamp": "...", "path": "/v1/health/sources", "requestId": "..." }
 }
 ```
 

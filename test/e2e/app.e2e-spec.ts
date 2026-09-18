@@ -1,4 +1,5 @@
 import { VersioningType, type INestApplication } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
 import request from 'supertest';
@@ -11,13 +12,25 @@ type Envelope = {
     meta: { path: string; requestId: string | null };
 };
 
+const SECRET = 'e2e-secret-that-is-at-least-32-chars';
+
+const tokenFor = (roles?: string[]) =>
+    new JwtService({ secret: SECRET }).sign({
+        id: 'u-1',
+        username: 'alice',
+        admin: false,
+        email: 'alice@example.com',
+        name: 'Alice',
+        ...(roles ? { roles } : {}),
+    });
+
 describe('App (e2e, no database configured)', () => {
     let app: INestApplication<App>;
 
     beforeAll(async () => {
         Object.assign(process.env, {
             NODE_ENV: 'test',
-            JWT_SECRET: 'e2e-secret-that-is-at-least-32-chars',
+            JWT_SECRET: SECRET,
             LOGGING_TO_FILE: 'false',
             LOG_LEVEL: 'error',
         });
@@ -72,7 +85,7 @@ describe('App (e2e, no database configured)', () => {
         expect((res.body as Envelope).data).toEqual({ status: 'ok' });
     });
 
-    it('GET /health/ready is ready with no sources', async () => {
+    it('GET /health/ready carries no source detail in the body', async () => {
         // Arrange: app started without a database
 
         // Act
@@ -80,7 +93,44 @@ describe('App (e2e, no database configured)', () => {
 
         // Assert
         expect(res.status).toBe(200);
-        expect((res.body as Envelope).data).toEqual({ status: 'ok', sources: [] });
+        expect((res.body as Envelope).data).toEqual({ status: 'ok' });
+    });
+
+    it('GET /v1/health/sources needs a token', async () => {
+        // Arrange: no Authorization header
+
+        // Act
+        const res = await request(app.getHttpServer()).get('/v1/health/sources');
+
+        // Assert
+        expect(res.status).toBe(401);
+    });
+
+    it('GET /v1/health/sources refuses a token without the admin role', async () => {
+        // Arrange
+        const call = request(app.getHttpServer())
+            .get('/v1/health/sources')
+            .set('Authorization', `Bearer ${tokenFor(['viewer'])}`);
+
+        // Act
+        const res = await call;
+
+        // Assert
+        expect(res.status).toBe(403);
+    });
+
+    it('GET /v1/health/sources lists the sources for an admin token, with no database configured', async () => {
+        // Arrange
+        const call = request(app.getHttpServer())
+            .get('/v1/health/sources')
+            .set('Authorization', `Bearer ${tokenFor(['admin'])}`);
+
+        // Act
+        const res = await call;
+
+        // Assert
+        expect(res.status).toBe(200);
+        expect((res.body as Envelope).data).toEqual({ sources: [] });
     });
 
     it('unknown routes return a 404 envelope', async () => {

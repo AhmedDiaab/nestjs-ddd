@@ -3,6 +3,7 @@ import { ProviderFactory } from '@common/factories';
 import {
     DatabaseInfoController,
     HealthController,
+    HealthSourcesController,
     MetricsController,
 } from '@interface/http/controllers';
 import { CsrfGuard, JwtGuard, RolesGuard } from '@interface/http/guards';
@@ -20,7 +21,13 @@ import { RequestContextMiddleware } from './http/middleware';
 @Module({
     imports: [ApplicationModule],
     // FallbackController must stay last: its catch-all route would shadow later controllers
-    controllers: [HealthController, MetricsController, DatabaseInfoController, FallbackController],
+    controllers: [
+        HealthController,
+        HealthSourcesController,
+        MetricsController,
+        DatabaseInfoController,
+        FallbackController,
+    ],
     providers: [
         ErrorPresenter,
         ProviderFactory.class(APP_GUARD, ThrottlerGuard),
