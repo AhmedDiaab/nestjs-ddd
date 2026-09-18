@@ -20,7 +20,7 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 15
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
 
             - uses: pnpm/action-setup@v4 # version comes from package.json "packageManager"
 
@@ -54,7 +54,7 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 10
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
 
             # the scripts are PowerShell; the container checks them without a Windows runner
             - name: Check start/stop scripts
