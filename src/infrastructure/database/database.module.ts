@@ -1,7 +1,10 @@
 import {
+    ConfigPortToken,
     DatabaseHealthPortToken,
     DatabaseInfoQueryPortToken,
+    IdempotencyStorePortToken,
     UnitOfWorkPortToken,
+    type ConfigPort,
 } from '@application/ports';
 import { ProviderFactory } from '@common/factories';
 import {
@@ -11,6 +14,10 @@ import {
 } from '@infrastructure/database/connection';
 import type { ConnectionProvider as IConnectionProvider } from '@infrastructure/database/contracts';
 import { PoolHealthAdapter } from '@infrastructure/database/health';
+import {
+    InMemoryIdempotencyStore,
+    OracleIdempotencyStore,
+} from '@infrastructure/database/idempotency';
 import { DatabaseInfoQueryDao } from '@infrastructure/database/queries';
 import { DatabaseUnitOfWork } from '@infrastructure/database/unit-of-work';
 import { Global, Module } from '@nestjs/common';
@@ -37,12 +44,22 @@ import { Global, Module } from '@nestjs/common';
             (db: IConnectionProvider) => new PoolHealthAdapter(db),
             [ConnectionProviderToken],
         ),
+        // memory: no database needed. oracle: shared across instances, joins its own transaction.
+        ProviderFactory.factory(
+            IdempotencyStorePortToken,
+            (config: ConfigPort, db: IConnectionProvider) =>
+                config.get('idempotency.store') === 'oracle'
+                    ? new OracleIdempotencyStore(db, config)
+                    : new InMemoryIdempotencyStore(config),
+            [ConfigPortToken, ConnectionProviderToken],
+        ),
     ],
     exports: [
         ConnectionProviderToken,
         DatabaseInfoQueryPortToken,
         UnitOfWorkPortToken,
         DatabaseHealthPortToken,
+        IdempotencyStorePortToken,
     ],
 })
 export class DatabaseModule {}

@@ -4,6 +4,7 @@ import {
     databaseConfigSchema,
     httpClientSchema,
     httpSchema,
+    idempotencySchema,
     jwtSchema,
     loggingSchema,
     metricsSchema,
@@ -22,6 +23,7 @@ const rootSchema = z.object({
     // optional: services without a database leave DATABASE_CONFIG_JSON unset
     database: databaseConfigSchema.optional(),
     jwt: jwtSchema,
+    idempotency: idempotencySchema,
     metrics: metricsSchema,
     scheduler: schedulerSchema,
     shutdown: shutdownSchema,
@@ -107,6 +109,13 @@ function hydrate() {
             issuer: envString(env.JWT_ISSUER),
             audience: envString(env.JWT_AUDIENCE),
             cookieName: envString(env.JWT_COOKIE_NAME),
+        },
+        idempotency: {
+            store: envString(env.IDEMPOTENCY_STORE),
+            table: envString(env.IDEMPOTENCY_TABLE),
+            ttlMs: envString(env.IDEMPOTENCY_TTL_MS),
+            inProgressTtlMs: envString(env.IDEMPOTENCY_IN_PROGRESS_TTL_MS),
+            header: envString(env.IDEMPOTENCY_HEADER),
         },
         metrics: {
             enabled: envBool(env.METRICS_ENABLED),

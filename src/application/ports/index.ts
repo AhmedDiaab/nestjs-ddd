@@ -16,6 +16,12 @@ export {
     type ConfigValues,
 } from './config.port';
 
+export {
+    type ClaimOutcome,
+    type IdempotencyStorePort,
+    IdempotencyStorePortToken,
+} from './idempotency-store.port';
+
 export { type LoggerPort } from './logger.port';
 
 export { type MetricLabels, type MetricsPort, MetricsPortToken } from './metrics.port';
