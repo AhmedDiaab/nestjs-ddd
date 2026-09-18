@@ -2,24 +2,27 @@ import { ConnectionProviderToken } from '@infrastructure/database/connection';
 import type { SourceHealth } from '@infrastructure/database/contracts';
 import { Public, UseZodHttp, Validated } from '@interface/http/decorators';
 import { Controller, Get, VersioningType, type INestApplication } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { z } from 'zod';
+import { signJwt } from '../fakes/sign-jwt';
 
 const SECRET = 'e2e-secret-that-is-at-least-32-chars';
 
 const adminToken = () =>
-    new JwtService({ secret: SECRET }).sign({
-        id: 'u-1',
-        username: 'alice',
-        admin: false,
-        email: 'alice@example.com',
-        name: 'Alice',
-        roles: ['admin'],
-    });
+    signJwt(
+        {
+            id: 'u-1',
+            username: 'alice',
+            admin: false,
+            email: 'alice@example.com',
+            name: 'Alice',
+            roles: ['admin'],
+        },
+        SECRET,
+    );
 
 type ErrorEnvelope = {
     success: false;

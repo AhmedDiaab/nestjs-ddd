@@ -20,6 +20,33 @@ Terms: [Glossary](../glossary.md). The HTTP layer in general: [HTTP interface](.
 
 This service only **verifies** tokens; it never issues them.
 
+## Issuing tokens
+
+This template ships `passport-jwt` for verification and deliberately carries no signing library:
+nothing in `src` mints a token, so `@nestjs/jwt` had no runtime importer and was removed
+(only the e2e tests signed their own, with `node:crypto`; see `test/fakes/sign-jwt.ts`).
+
+A service that needs to issue tokens — a login endpoint, a service-to-service credential — adds
+that dependency itself:
+
+- **Library**: `@nestjs/jwt` (simplest, matches the Nest ecosystem) or `jose` (no framework
+  coupling, better fit if you also need JWKS/rotation on the issuing side). Either is a normal
+  `pnpm add`, justified by the feature that needs it.
+- **Where the code goes**: the issuing use case (validate credentials, decide the claims) lives in
+  `application`, like any other use case; the adapter that actually calls the signing library lives
+  in `infrastructure/auth` next to the strategies that verify. The use case depends on a port
+  (e.g. `TokenIssuerPort`), not on `@nestjs/jwt` or `jose` directly — same rule as any other
+  infrastructure dependency.
+- **Separate signing and verification keys when they differ.** A single shared secret is fine for
+  one service signing and verifying its own tokens; the moment another service must verify what you
+  issue (or vice versa), the issuing key and `jwt.secret` are different config values, and only the
+  verification key belongs to the config this template already validates. Don't let a rotation of
+  one silently invalidate the other.
+- **Worked example**: `atoll-delete-tool` (a project built from this template) registers
+  `JwtModule` inside its own `AuthModule` and issues tokens from a login use case — read that
+  repository if you want a wiring that already compiles rather than reconstructing one from this
+  paragraph.
+
 ## Choosing where a strategy applies
 
 ### Globally (the default)

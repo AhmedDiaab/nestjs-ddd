@@ -1,9 +1,9 @@
 import { VersioningType, type INestApplication } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
 import request from 'supertest';
 import type { App } from 'supertest/types';
+import { signJwt } from '../fakes/sign-jwt';
 import { MixedAuthController } from '../fixtures/http/mixed-auth.controller';
 import { OpenAuthController } from '../fixtures/http/open-auth.controller';
 import { RolesAuthController } from '../fixtures/http/roles-auth.controller';
@@ -12,14 +12,17 @@ import { SilentAuthController } from '../fixtures/http/silent-auth.controller';
 const SECRET = 'e2e-secret-that-is-at-least-32-chars';
 
 const tokenFor = (roles?: string[]) =>
-    new JwtService({ secret: SECRET }).sign({
-        id: 'u-1',
-        username: 'alice',
-        admin: false,
-        email: 'alice@example.com',
-        name: 'Alice',
-        ...(roles ? { roles } : {}),
-    });
+    signJwt(
+        {
+            id: 'u-1',
+            username: 'alice',
+            admin: false,
+            email: 'alice@example.com',
+            name: 'Alice',
+            ...(roles ? { roles } : {}),
+        },
+        SECRET,
+    );
 
 describe('Authentication (e2e)', () => {
     let app: INestApplication<App>;
