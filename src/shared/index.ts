@@ -29,3 +29,12 @@ export { SKIP_FORMAT_HEADER } from './response-envelope';
 export { APP_NAME } from './app.constants';
 
 export { createToken, type TypedToken } from './typed-token';
+
+export {
+    formatTraceparent,
+    newSpanId,
+    newTraceId,
+    parseTraceparent,
+    traceContextFrom,
+    type TraceContext,
+} from './trace-context.util';

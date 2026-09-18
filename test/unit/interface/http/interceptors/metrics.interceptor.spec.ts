@@ -1,7 +1,7 @@
 import type { MetricLabels, MetricsPort } from '@application/ports';
-import { Metrics } from '@infrastructure/metrics';
 import { MetricsInterceptor } from '@interface/http/interceptors/metrics.interceptor';
 import type { CallHandler, ExecutionContext } from '@nestjs/common';
+import { Metrics } from '@shared/metrics';
 import { lastValueFrom, of, throwError } from 'rxjs';
 
 type Recorded = { name: string; labels?: MetricLabels };

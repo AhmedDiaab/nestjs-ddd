@@ -143,4 +143,20 @@ export default defineConfig([
             ],
         },
     },
+    {
+        files: ['src/interface/**/*.ts'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: ['@infrastructure', '@infrastructure/*'],
+                            message: 'Interface talks to ports and @shared, never to adapters.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
 ]);

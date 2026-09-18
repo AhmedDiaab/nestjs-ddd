@@ -75,7 +75,7 @@ describe('HTTP error responses (e2e)', () => {
         expect(res.status).toBe(503);
         expect(res.body as ErrorEnvelope).toMatchObject({
             success: false,
-            error: { code: 'NOT_READY', details: [{ sourceKey: 'main', ok: false }] },
+            error: { code: 'NOT_READY', details: [{ key: 'main', ok: false }] },
         });
     });
 

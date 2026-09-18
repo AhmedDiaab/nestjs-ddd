@@ -1,5 +1,4 @@
 import { MetricsPortToken, type MetricsPort } from '@application/ports';
-import { Metrics } from '@infrastructure/metrics';
 import {
     Inject,
     Injectable,
@@ -7,6 +6,7 @@ import {
     type ExecutionContext,
     type NestInterceptor,
 } from '@nestjs/common';
+import { Metrics } from '@shared/metrics';
 import type { Request, Response } from 'express';
 import type { Observable } from 'rxjs';
 

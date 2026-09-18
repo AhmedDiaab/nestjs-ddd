@@ -1,5 +1,5 @@
 import type { LoggerPort, MetricsPort } from '@application/ports';
-import { Metrics } from '@infrastructure/metrics';
+import { Metrics } from '@shared/metrics';
 import type { ScheduledJob } from './scheduled-job';
 
 /**

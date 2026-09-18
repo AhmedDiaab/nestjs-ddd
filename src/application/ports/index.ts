@@ -4,6 +4,12 @@ export {
 } from './domain-event-publisher.port';
 
 export {
+    type DatabaseHealthPort,
+    DatabaseHealthPortToken,
+    type SourceHealthView,
+} from './database-health.port';
+
+export {
     type ConfigKey,
     type ConfigPort,
     type ConfigValue,
@@ -13,6 +19,8 @@ export {
 export { type LoggerPort } from './logger.port';
 
 export { type MetricLabels, type MetricsPort, MetricsPortToken } from './metrics.port';
+
+export { type MetricsScrapePort, MetricsScrapePortToken } from './metrics-scrape.port';
 
 export {
     type RequestContext,

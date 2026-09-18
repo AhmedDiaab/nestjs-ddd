@@ -1,5 +1,5 @@
 import type { ConnectionProvider } from '@infrastructure/database/contracts';
-import { Metrics } from './metric-names';
+import { Metrics } from '@shared/metrics';
 import type { PrometheusMetrics } from './prometheus-metrics';
 
 /**

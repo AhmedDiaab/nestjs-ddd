@@ -1,8 +1,10 @@
 import {
     ConfigPortToken,
     MetricsPortToken,
+    MetricsScrapePortToken,
     type ConfigPort,
     type MetricsPort,
+    type MetricsScrapePort,
 } from '@application/ports';
 import { ProviderFactory } from '@common/factories';
 import { ConnectionProviderToken } from '@infrastructure/database/connection';
@@ -40,7 +42,12 @@ import { PrometheusMetrics } from './prometheus-metrics';
             (registry: PrometheusMetrics | null): MetricsPort => registry ?? new NoopMetrics(),
             [MetricsRegistryToken],
         ),
+        ProviderFactory.factory(
+            MetricsScrapePortToken,
+            (registry: PrometheusMetrics | null): MetricsScrapePort | null => registry,
+            [MetricsRegistryToken],
+        ),
     ],
-    exports: [MetricsPortToken, MetricsRegistryToken],
+    exports: [MetricsPortToken, MetricsRegistryToken, MetricsScrapePortToken],
 })
 export class MetricsModule {}

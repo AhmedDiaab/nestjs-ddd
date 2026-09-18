@@ -5,9 +5,8 @@ import {
     type ConfigPort,
     type RequestContextPort,
 } from '@application/ports';
-import { formatTraceparent, traceContextFrom } from '@infrastructure/context';
 import { Inject, Injectable, type NestMiddleware } from '@nestjs/common';
-import { isSafeCorrelationId } from '@shared';
+import { formatTraceparent, isSafeCorrelationId, traceContextFrom } from '@shared';
 import type { NextFunction, Request, Response } from 'express';
 
 /**

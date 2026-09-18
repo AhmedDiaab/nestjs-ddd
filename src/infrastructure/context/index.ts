@@ -7,6 +7,6 @@ export {
     parseTraceparent,
     traceContextFrom,
     type TraceContext,
-} from './trace-context.util';
+} from '@shared';
 
 export { ContextModule } from './context.module';

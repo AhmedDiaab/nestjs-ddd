@@ -1,6 +1,6 @@
 export { collectDatabasePoolMetrics } from './database-pool.collector';
 
-export { Metrics, type MetricName } from './metric-names';
+export { Metrics, type MetricName } from '@shared/metrics';
 
 export { MetricsModule } from './metrics.module';
 

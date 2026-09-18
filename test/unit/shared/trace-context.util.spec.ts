@@ -4,7 +4,7 @@ import {
     newTraceId,
     parseTraceparent,
     traceContextFrom,
-} from '@infrastructure/context';
+} from '@shared';
 
 const TRACE = 'a'.repeat(32);
 const SPAN = 'b'.repeat(16);

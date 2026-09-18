@@ -1,7 +1,5 @@
-import type { ConfigPort, ShutdownPort } from '@application/ports';
-import { ConfigPortToken, ShutdownPortToken } from '@application/ports';
-import { ConnectionProviderToken } from '@infrastructure/database/connection';
-import type { ConnectionProvider } from '@infrastructure/database/contracts';
+import type { ConfigPort, DatabaseHealthPort, ShutdownPort } from '@application/ports';
+import { ConfigPortToken, DatabaseHealthPortToken, ShutdownPortToken } from '@application/ports';
 import { Public } from '@interface/http/decorators';
 import {
     Controller,
@@ -19,7 +17,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 @Controller({ path: 'health', version: VERSION_NEUTRAL })
 export class HealthController {
     constructor(
-        @Inject(ConnectionProviderToken) private readonly db: ConnectionProvider,
+        @Inject(DatabaseHealthPortToken) private readonly databaseHealth: DatabaseHealthPort,
         @Inject(ConfigPortToken) private readonly config: ConfigPort,
         @Inject(ShutdownPortToken) private readonly shutdown: ShutdownPort,
     ) {}
@@ -47,7 +45,7 @@ export class HealthController {
         const timeoutMs = this.config.get('database.health.timeoutMs') ?? 3000;
         const hideErrors = this.config.isProduction();
 
-        const sources = (await this.db.health(timeoutMs)).map((source) => ({
+        const sources = (await this.databaseHealth.check(timeoutMs)).map((source) => ({
             ...source,
             error: hideErrors ? undefined : source.error,
         }));
