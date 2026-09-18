@@ -14,6 +14,7 @@ export const Metrics = {
     dbPoolConnections: 'database_pool_connections',
     domainEventsPublished: 'domain_events_published_total',
     domainEventHandlerFailures: 'domain_event_handler_failures_total',
+    idempotencyRequests: 'idempotency_requests_total',
 } as const;
 
 export type MetricName = (typeof Metrics)[keyof typeof Metrics];

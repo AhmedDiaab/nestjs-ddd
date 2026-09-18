@@ -6,6 +6,8 @@ export { Validated } from './validated.decorator';
 
 export { Public, IS_PUBLIC } from './public.decorator';
 
+export { Idempotent, IS_IDEMPOTENT } from './idempotent.decorator';
+
 export { Roles, ROLES } from './roles.decorator';
 
 export { RawResponse, RAW_RESPONSE } from './raw-response.decorator';

@@ -58,6 +58,9 @@ export class PrometheusMetrics implements MetricsPort, MetricsScrapePort {
             'Domain event handlers that threw instead of completing',
             ['event'],
         );
+        this.counter(Metrics.idempotencyRequests, 'Requests to an @Idempotent() route', [
+            'outcome',
+        ]);
     }
 
     increment(name: string, labels: MetricLabels = {}, value = 1): void {

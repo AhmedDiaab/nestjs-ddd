@@ -14,6 +14,7 @@ import { FallbackController } from './http/common/fallback/fallback.controller';
 import { ResponseFormatterInterceptor } from './http/common/interceptors/response-formatter.interceptor';
 import { ErrorPresenter } from './http/error-presenter';
 import { GlobalExceptionFilter } from './http/global-exception.filter';
+import { IdempotencyInterceptor } from './http/interceptors/idempotency.interceptor';
 import { MetricsInterceptor } from './http/interceptors/metrics.interceptor';
 import { ZodHttpInterceptor } from './http/interceptors/zod-http.interceptor';
 import { RequestContextMiddleware } from './http/middleware';
@@ -40,6 +41,9 @@ import { RequestContextMiddleware } from './http/middleware';
         ProviderFactory.class(APP_INTERCEPTOR, MetricsInterceptor),
         ProviderFactory.class(APP_INTERCEPTOR, ZodHttpInterceptor),
         ProviderFactory.class(APP_INTERCEPTOR, ResponseFormatterInterceptor),
+        // after the formatter, so it is the innermost interceptor: it stores/replays the
+        // handler's raw payload, and the formatter re-wraps a replay with fresh meta
+        ProviderFactory.class(APP_INTERCEPTOR, IdempotencyInterceptor),
         ProviderFactory.class(APP_FILTER, GlobalExceptionFilter),
     ],
     exports: [ErrorPresenter],

@@ -17,6 +17,7 @@ async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
         bufferLogs: true,
         bodyParser: false, // configured below with limits from config
+        rawBody: true, // req.rawBody, for IdempotencyInterceptor's fingerprint
     });
 
     // use logger from DI
