@@ -15,8 +15,9 @@ describe('CircuitBreaker', () => {
     });
 
     it('opens after the configured number of consecutive failures', () => {
-        // Arrange
-        const sut = new CircuitBreaker(options);
+        // Arrange: a frozen clock, or the real one advances a millisecond mid-test and the
+        // remaining wait comes back as 999
+        const sut = new CircuitBreaker(options, () => 0);
 
         // Act
         [1, 2, 3].forEach(() => sut.recordFailure());
