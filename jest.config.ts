@@ -31,7 +31,7 @@ const config: Config = {
     coveragePathIgnorePatterns: ['main.ts', 'repl.ts', 'src/common/(base|contracts)/*'],
     // floor, not a target: raise it when coverage rises, never lower it to make a change pass
     coverageThreshold: {
-        global: { statements: 85, branches: 70, functions: 71, lines: 85 },
+        global: { statements: 86, branches: 71, functions: 73, lines: 86 },
     },
 };
 
