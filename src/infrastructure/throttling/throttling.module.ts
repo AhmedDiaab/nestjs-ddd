@@ -31,6 +31,8 @@ import { ThrottlerStorageToken } from './throttler-storage.token';
             [ConfigPortToken],
         ),
     ],
-    exports: [ThrottlerStorageToken, ThrottlerModule],
+    // ThrottlerModule is not re-exported: @nestjs/throttler marks it @Global() itself, so
+    // re-exporting it here was a no-op (proven by mutation, not by reading).
+    exports: [ThrottlerStorageToken],
 })
 export class ThrottlingModule {}
