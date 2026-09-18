@@ -19,6 +19,7 @@ Start here. Each link is one focused document.
 | Add a way of authenticating, or change where auth applies                      | [Add an authentication strategy](guides/add-an-auth-strategy.md)                  |
 | Call another service over HTTP                                                 | [Call another service](guides/call-another-service.md)                            |
 | Run work on a schedule (cron)                                                  | [Add a scheduled job](guides/add-a-scheduled-job.md)                              |
+| Make sure a domain event is never missed (outbox)                              | [Deliver events reliably](guides/deliver-events-reliably.md)                      |
 | Return a specific HTTP status for a failure                                    | [Add an error](guides/add-error.md)                                               |
 | Add an environment variable                                                    | [Add a config variable](guides/add-config-variable.md)                            |
 | Connect another database / schema                                              | [Add a database source](guides/add-database-source.md)                            |

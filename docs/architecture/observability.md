@@ -47,6 +47,8 @@ Off by default. `METRICS_ENABLED=true` serves the Prometheus text format at `GET
 | `scheduled_job_runs_total`             | counter   | `job`, `outcome`            |
 | `scheduled_job_duration_seconds`       | histogram | `job`                       |
 | `database_pool_connections`            | gauge     | `source`, `state`           |
+| `domain_events_published_total`        | counter   | `event`                     |
+| `domain_event_handler_failures_total`  | counter   | `event`                     |
 
 Plus Node and process metrics (heap, event loop lag, GC) unless `METRICS_DEFAULT_METRICS=false`, and a `service` label on everything, from `APP_NAME`.
 
@@ -66,17 +68,18 @@ constructor(@Inject(MetricsPortToken) private readonly metrics: MetricsPort) {}
 this.metrics.increment(Metrics.jobRuns, { job: 'tickets.closeStale', outcome: 'succeeded' });
 ```
 
-Declare the metric in `PrometheusMetrics` first, and add its name to `metric-names.ts` so the dashboard query and the code that emits it can't drift.
+Declare the metric in `PrometheusMetrics` first, and add its name to `src/shared/metrics/metric-names.ts` (re-exported from `@shared/metrics`) so the dashboard query and the code that emits it can't drift.
 
 ### Worth alerting on
 
-| Signal                                                          | Why                                                     |
-| --------------------------------------------------------------- | ------------------------------------------------------- |
-| 5xx rate by `route`                                             | the thing users feel                                    |
-| p95 of `http_server_request_duration_seconds`                   | slow before it is broken                                |
-| `http_client_circuit_open_total` increasing                     | a dependency is failing and being shed                  |
-| `scheduled_job_runs_total{outcome="failed"}`, or no runs at all | a job that silently stops is the failure nobody notices |
-| `database_pool_connections{state="in_use"}` near `poolMax`      | requests are about to queue for a connection            |
+| Signal                                                          | Why                                                                                                                                                             |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5xx rate by `route`                                             | the thing users feel                                                                                                                                            |
+| p95 of `http_server_request_duration_seconds`                   | slow before it is broken                                                                                                                                        |
+| `http_client_circuit_open_total` increasing                     | a dependency is failing and being shed                                                                                                                          |
+| `scheduled_job_runs_total{outcome="failed"}`, or no runs at all | a job that silently stops is the failure nobody notices                                                                                                         |
+| `database_pool_connections{state="in_use"}` near `poolMax`      | requests are about to queue for a connection                                                                                                                    |
+| `domain_event_handler_failures_total` by `event`                | a handler that fails on every event is otherwise visible only in logs (see [Application layer → Delivery guarantees](application-layer.md#delivery-guarantees)) |
 
 ## Logs
 

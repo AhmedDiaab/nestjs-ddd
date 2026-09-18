@@ -14,11 +14,9 @@ Ordered by how much damage they can do.
 
 **Closed 2026-09-18**: the `Hello World` scaffolding is gone and `AppModule` is now only a composition root. Correlation ids from outside are now validated before they reach the logs, and both the request id and the W3C `traceparent` come back as response headers ([Observability](architecture/observability.md)). Shutdown now fails readiness first, keeps serving while the load balancer notices, drains in-flight requests and closes the database pools last ([Operations](architecture/operations.md#graceful-shutdown)). Authentication used to be opt-in per controller. `JwtGuard` is now a global `APP_GUARD` with a `@Public()` opt-out, so a route that declares nothing is protected; see [Add an authentication strategy](guides/add-an-auth-strategy.md).
 
-| #   | Gap                                                                                                                                                                                                                                                                                                      | Where                                                                      | Suggested fix                                                                                                     |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| 1   | **The interface layer is not fenced by ESLint.** The import restrictions cover `application/**` and `domain/**` only, so `HealthController` reaches into `@infrastructure/database/*` for `ConnectionProviderToken` and the `ConnectionProvider` contract — which the docs call infrastructure-internal. | `eslint.config.mjs`, `src/interface/http/controllers/health.controller.ts` | Add a `no-restricted-imports` block for `src/interface/**`, and put health behind an application port             |
-| 2   | **Domain events are best-effort and that is undersold.** They are dispatched in process after the commit, and a failing handler is logged and swallowed. A crash between the commit and the dispatch loses the event.                                                                                    | `src/application/events/in-process-domain-event-publisher.ts`              | Fine for side effects; say so explicitly in the docs, and add an outbox recipe for events other systems depend on |
-| 3   | **`/health/ready` is unauthenticated, exempt from throttling and lists the configured source keys.** In production the error text is hidden, the topology isn't.                                                                                                                                         | `src/interface/http/controllers/health.controller.ts`                      | Keep the liveness probe open; bind the detailed readiness body to an internal route or a token                    |
+**Closed 2026-09-18** (the same day, a second pass): the interface layer is now fenced — `src/interface/**` cannot import from `@infrastructure` at all, enforced by an ESLint `no-restricted-imports` block and kept honest by `test/unit/layers/interface-fence.spec.ts`. `HealthController` no longer reaches into `ConnectionProviderToken`/`ConnectionProvider`; it goes through a new application port, `DatabaseHealthPort`, backed by a `PoolHealthAdapter` in infrastructure. `GET /health/ready` now answers `{status}` only; the per-source topology (dialect, latency, error text) moved to an authenticated `GET /v1/health/sources` (`@Roles('admin')`), and a failing source is still logged at `warn` (`health.ready.failed`) for anyone without a token. Domain event delivery is no longer just implied: `DomainEventPublisherPort`'s JSDoc states the guarantee (at-most-once, in process, after the commit) and `InProcessDomainEventPublisher` now counts `domain_events_published_total` and `domain_event_handler_failures_total` by event name, so a handler that always throws shows up on a dashboard instead of only in logs. [`docs/guides/deliver-events-reliably.md`](guides/deliver-events-reliably.md) has the outbox recipe for events another system depends on.
+
+Nothing is outstanding in this section right now — the three rows that used to live here are the ones closed above. See section 2 for what is still genuinely missing.
 
 ## 2. Missing features
 
@@ -53,10 +51,14 @@ Judgement calls rather than defects. Disagree freely — but disagree on purpose
 
 ## 4. What I'd fix first
 
-1. Fence the interface layer in ESLint and move health behind an application port.
-2. Say something in the docs about the remaining gaps you are choosing to accept.
+Section 1 is empty now, so the real decisions live in section 2. In roughly the order they tend to bite:
 
-What is left in section 1 is small; section 2 is where the real decisions are — a queue and outbox, idempotency, caching, and how you will handle authorization beyond token roles.
+1. **Authorization beyond roles** (row 1) — decide this before the first feature that needs resource-level checks, not after; retrofitting a policy model onto endpoints already shipped is the expensive path.
+2. **Queues and outbox** (row 5) — the direct follow-on from the events guarantee above: if a feature needs at-least-once delivery, this is where that gets built, on the existing `JobRunner`.
+3. **Idempotency** (row 4) — matters as soon as a client sits behind a load balancer or a retrying gateway; pairs naturally with the outbox work.
+4. **Caching** (row 3) — `ioredis` is already a dependency for shared throttling; reuse it for a `CachePort` before every request hits the database for the same lookup.
+
+The rest of section 2 (JWKS rotation, migrations, a disposable test database, multi-tenancy, API deprecation, repository hygiene, pagination) is real but lower urgency than the four above for most teams forking this template.
 
 ## Environment items (not code)
 

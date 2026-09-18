@@ -60,6 +60,16 @@ Declare the failure union in the type parameters so callers and tests see what c
 
 Read-model types (e.g. `TicketSummary`) are plain serialisable objects: ISO date strings, no class instances.
 
+## Delivery guarantees
+
+Domain events (`aggregate.addEvent(...)`, published with `DomainEventPublisherPortToken` after the unit of work commits) are **at-most-once, in process, after the commit**:
+
+- The default binding, `InProcessDomainEventPublisher`, calls each matching `DomainEventHandler` in order, in the same process, in the same request.
+- A crash (or a deploy) between the commit and the dispatch loses the event outright — there is no retry, no queue and nothing durable backing it.
+- A handler that throws is logged (`domain.event.handler.failed`) and counted (`domain_event_handler_failures_total`, label `event`) rather than retried; the loop moves on to the next handler. A successful dispatch is counted too (`domain_events_published_total`). See [Observability → Worth alerting on](observability.md#worth-alerting-on).
+
+The rule that follows: **use domain events for side effects you can afford to lose** — a cache invalidation, a notification, a metric — **never for state another system depends on** to reach a consistent view. When a consumer must not miss an event, that is at-least-once delivery, which this template does not ship; see [Deliver events reliably](../guides/deliver-events-reliably.md) for the outbox recipe.
+
 ## Application errors (`src/application/errors`)
 
 All extend `AppError` and implement `toProblem()`:

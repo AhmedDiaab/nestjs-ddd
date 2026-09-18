@@ -12,20 +12,20 @@ infrastructure ─────┴───────────────�
 common, shared: helpers usable by every layer (shared is framework-free)
 ```
 
-| Layer          | Folder               | Contains                                                                                  | May import                                                                  | Must not import                                                     |
-| -------------- | -------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Domain         | `src/domain`         | entities, value objects, aggregates, domain errors, **repository interfaces**             | `@shared`, itself                                                           | `@application`, `@infrastructure`, `@interface`, `@nestjs/*`        |
-| Application    | `src/application`    | use cases, **query/gateway ports**, DI tokens, application errors                         | `@domain`, `@common`, `@shared`, `@nestjs/common` (DI decorators)           | `@infrastructure`, `@interface`, `oracledb`, `express`, `passport*` |
-| Infrastructure | `src/infrastructure` | adapters: config, logging, auth strategy, database (pools, clients, repositories, DAOs)   | `@application`, `@domain`, `@common`, `@shared`, drivers                    | `@interface`                                                        |
-| Interface      | `src/interface`      | controllers, guards, interceptors, exception filter, Zod schemas, Swagger, cron jobs      | `@application`, `@domain`, `@common`, `@shared`, infra **tokens/contracts** | adapter internals                                                   |
-| Common         | `src/common`         | Nest-aware helpers: `ProviderFactory`, `UseCase` base, utils                              | `@shared`, `@nestjs/common`                                                 | layers                                                              |
-| Shared         | `src/shared`         | framework-free primitives: `Result`, `Problem`, envelope types, pagination, `createToken` | nothing app-specific                                                        | everything else                                                     |
+| Layer          | Folder               | Contains                                                                                  | May import                                                        | Must not import                                                                 |
+| -------------- | -------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Domain         | `src/domain`         | entities, value objects, aggregates, domain errors, **repository interfaces**             | `@shared`, itself                                                 | `@application`, `@infrastructure`, `@interface`, `@nestjs/*`                    |
+| Application    | `src/application`    | use cases, **query/gateway ports**, DI tokens, application errors                         | `@domain`, `@common`, `@shared`, `@nestjs/common` (DI decorators) | `@infrastructure`, `@interface`, `oracledb`, `express`, `passport*`             |
+| Infrastructure | `src/infrastructure` | adapters: config, logging, auth strategy, database (pools, clients, repositories, DAOs)   | `@application`, `@domain`, `@common`, `@shared`, drivers          | `@interface`                                                                    |
+| Interface      | `src/interface`      | controllers, guards, interceptors, exception filter, Zod schemas, Swagger, cron jobs      | `@application`, `@domain`, `@common`, `@shared`                   | `@infrastructure` — **never**; ports and `@shared` only, and ESLint enforces it |
+| Common         | `src/common`         | Nest-aware helpers: `ProviderFactory`, `UseCase` base, utils                              | `@shared`, `@nestjs/common`                                       | layers                                                                          |
+| Shared         | `src/shared`         | framework-free primitives: `Result`, `Problem`, envelope types, pagination, `createToken` | nothing app-specific                                              | everything else                                                                 |
 
 Enforcement:
 
-- **ESLint** `no-restricted-imports` blocks the application and domain violations above (`eslint.config.mjs`).
+- **ESLint** `no-restricted-imports` blocks the application, domain and interface violations above (`eslint.config.mjs`); `src/interface/**` cannot import `@infrastructure` at all.
 - **madge**: `pnpm check:circular` fails on import cycles.
-- **Layer tests**: `test/unit/layers/*` check module wiring.
+- **Layer tests**: `test/unit/layers/*` check module wiring; `interface-fence.spec.ts` walks `src/interface/**` for an `@infrastructure` import specifier so an edited ESLint config can't quietly reopen the seam.
 
 ## Folder map
 
