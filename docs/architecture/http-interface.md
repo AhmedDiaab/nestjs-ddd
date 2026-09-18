@@ -63,6 +63,14 @@ list(@Validated('query') query: ListTicketsQuery) { ... }
 
 Keep HTTP schemas structural (types, formats, enums, ranges). Business rules (trim, max length meaning, state rules) belong to domain value objects, which return 422.
 
+## Idempotency
+
+`@Idempotent()` (`interface/http/decorators/idempotent.decorator.ts`) + `IdempotencyInterceptor` let a handler declare that a request carrying a known `Idempotency-Key` header runs at most once: a retry with the same key and body gets the first response back instead of running the handler again. Opt-in, like `@Public()` and `@Roles()` — nothing runs unless the handler is decorated.
+
+`IdempotencyInterceptor` is registered **after** `ResponseFormatterInterceptor`, making it the **innermost** interceptor in the chain (`interface.module.ts`). That ordering is deliberate: it stores and replays the handler's own raw payload, not the `{ success, data, meta }` envelope, so a replay is re-wrapped with the _replaying_ request's own `requestId`/`timestamp` rather than resurrecting the original's stale ones. Registering it before `ResponseFormatterInterceptor` instead would store the envelope itself, and a replay would carry a dead request id.
+
+The key is fingerprinted against the exact request bytes (SHA-256 of method + path + the raw body), backed by `IdempotencyStorePort` (an in-memory adapter for a single instance, an Oracle adapter for a shared/durable store). Full behaviour table, configuration and the effect-atomicity limitation: [Make an endpoint idempotent](../guides/make-an-endpoint-idempotent.md).
+
 ## Authentication
 
 - `JwtStrategy` (`src/infrastructure/auth/strategies/jwt.strategy.ts`) reads the token from the cookie named by `JWT_COOKIE_NAME` (default `jwt`), falling back to `Authorization: Bearer`. It verifies the secret, `JWT_ALGORITHMS`, `JWT_ISSUER` and `JWT_AUDIENCE`.
@@ -124,3 +132,4 @@ URI versioning with default `1`: routes are `/v1/...`. Health routes are `VERSIO
 
 - [Add a controller](../guides/add-controller.md)
 - [Add an error](../guides/add-error.md)
+- [Make an endpoint idempotent](../guides/make-an-endpoint-idempotent.md)

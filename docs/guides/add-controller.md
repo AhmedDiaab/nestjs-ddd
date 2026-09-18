@@ -147,5 +147,6 @@ controllers: [HealthController, DatabaseInfoController, TicketsController, Fallb
 - Guards that read request data: validate with `readGuardInput(context, 'params', schema)` and throw `ForbiddenError`/`UnauthorizedError`.
 - Swagger: `@ApiTags` and security decorators. Request docs come from `@UseZodHttp` automatically; add `@ZodResponse(200, schema)` (from `../swagger`) to document the response body. Use `.describe('...')` on schema fields for descriptions.
 - Versioned change: `@Controller({ path: 'tickets', version: '2' })`.
+- `POST` that a client might retry through a load balancer: [Make an endpoint idempotent](make-an-endpoint-idempotent.md) (`@Idempotent()`).
 
 Tests: [Write tests → HTTP](write-tests.md#http-end-to-end).

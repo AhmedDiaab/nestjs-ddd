@@ -62,6 +62,22 @@ Adding a variable: [Add a config variable](../guides/add-config-variable.md).
 | `SCHEDULER_ENABLED`                                         | `false`                         | run the cron jobs in this instance ([Operations → Scheduled jobs](operations.md#scheduled-jobs))                                |
 | `SCHEDULER_TIMEZONE`                                        | `UTC`                           | IANA timezone the cron expressions are read in                                                                                  |
 
+`main.ts` starts Nest with `rawBody: true`, so every parsed request has its exact bytes buffered onto `req.rawBody` — `IdempotencyInterceptor` needs them to fingerprint a request without being fooled by a re-serialized body. `JSON_BODY_LIMIT` / `URLENCODED_BODY_LIMIT` still cap how large that buffered body (and therefore the memory it holds per in-flight request) can be; they were not changed for this, but it is worth knowing the raw bytes are now held in memory for the lifetime of the request, not just parsed and discarded.
+
+### Idempotency
+
+Backs `@Idempotent()` ([guide](../guides/make-an-endpoint-idempotent.md)).
+
+| Variable                         | Default            | Notes                                                                                                                   |
+| -------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `IDEMPOTENCY_STORE`              | `memory`           | `memory`: per instance, lost on restart. `oracle`: shared across instances, survives a restart                          |
+| `IDEMPOTENCY_TABLE`              | `IDEMPOTENCY_KEYS` | Oracle only; must match `/^[A-Za-z][A-Za-z0-9_]{0,29}$/` — the one identifier SQL can't bind, so it's validated at boot |
+| `IDEMPOTENCY_TTL_MS`             | `86400000` (24h)   | how long a claimed key (in progress or completed) is remembered at all                                                  |
+| `IDEMPOTENCY_IN_PROGRESS_TTL_MS` | `60000`            | how long an in-progress claim is honoured before it's treated as abandoned and re-claimed                               |
+| `IDEMPOTENCY_HEADER`             | `idempotency-key`  | header carrying the client-supplied key                                                                                 |
+
+`IDEMPOTENCY_STORE=oracle` does not fail at boot if no `main` database is configured — `DatabaseModule` binds the port regardless of what's in `DATABASE_CONFIG_JSON`. The first `claim()` call then fails with `UnknownSourceKeyError` instead.
+
 ### Metrics
 
 | Variable                  | Default | Notes                                                                                        |

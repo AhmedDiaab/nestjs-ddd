@@ -85,4 +85,4 @@ An outbox does not give you exactly-once or global ordering. It trades "might lo
 - [Application layer → Delivery guarantees](../architecture/application-layer.md#delivery-guarantees)
 - [Add a scheduled job](add-a-scheduled-job.md)
 - [Add a repository](add-repository.md#multiple-aggregates-in-one-transaction) for `UnitOfWorkPort`
-- `docs/known-gaps.md` section 2, row 5 (queues and outbox)
+- `docs/known-gaps.md` section 2, row 4 (queues and outbox)

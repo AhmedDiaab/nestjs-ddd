@@ -49,8 +49,11 @@ Off by default. `METRICS_ENABLED=true` serves the Prometheus text format at `GET
 | `database_pool_connections`            | gauge     | `source`, `state`           |
 | `domain_events_published_total`        | counter   | `event`                     |
 | `domain_event_handler_failures_total`  | counter   | `event`                     |
+| `idempotency_requests_total`           | counter   | `outcome`                   |
 
 Plus Node and process metrics (heap, event loop lag, GC) unless `METRICS_DEFAULT_METRICS=false`, and a `service` label on everything, from `APP_NAME`.
+
+`idempotency_requests_total`'s `outcome` is a closed set of five values (`claimed`, `replay`, `mismatch`, `in_progress`, `missing_key`), recorded by `IdempotencyInterceptor` for every request to a `@Idempotent()` route ([guide](../guides/make-an-endpoint-idempotent.md)) — bounded the same way `route` is, never the key itself.
 
 ### Rules that keep metrics cheap
 
