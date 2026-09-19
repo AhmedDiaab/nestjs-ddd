@@ -2,7 +2,7 @@
 
 An honest, dated review of what this template **does not** do, what is weak in what it does do, and what I'd fix first. Kept in the repo so a team adopting the template inherits the list instead of rediscovering it in production.
 
-- **Reviewed**: 2026-09-19, against `main` (`5d53d2b`), after the idempotency feature landed.
+- **Reviewed**: 2026-09-19, against `main` (`84e2f4b`), after the idempotency feature landed; re-checked the same day against the pushed repository and its CI.
 - **Size at that commit**: 231 source files, ~6,770 lines, 24 runtime dependencies, 68 spec files (56 unit, 9 e2e, 3 live Oracle), coverage floor 87/72/76/87.
 - **Scope**: the template itself. Business features built on top are out of scope.
 - **How to use it**: before starting a project from this template, walk sections 1 and 2 and decide per row — fix it, accept it, or replace it with your platform's version. Cross items off as you go; delete the ones that don't apply to you.
@@ -23,7 +23,9 @@ Terms: [Glossary](glossary.md). Rules the template does enforce: [Architecture o
 
 ## 1. Defects and risks in what exists
 
-Empty. Every row from the last review is closed by the pass described above, except pagination — which turned out not to be a defect at all.
+Every row from the last review is closed by the pass described above, except pagination — which turned out not to be a defect at all. One new item, found by CI rather than by reading: the next major versions of two toolchains don't build.
+
+**The pending major dependency bumps are red, and one of them is a design signal.** Dependabot's `nestjs` group (nine packages) fails `pnpm typecheck` with `TS2345` in `src/infrastructure/logging/pino.module.ts` and `src/infrastructure/throttling/throttling.module.ts`: the typed-token `inject` arrays this template deliberately uses are no longer assignable to `LoggerModuleAsyncParams` and `ThrottlerAsyncOptions`. That is the seam where typed DI ([decision 0002](decisions/0002-typed-di-tokens.md)) meets third-party module options that expect loosely typed `inject`, and it will keep reappearing on every such major — worth a small typed helper rather than a cast at each call site. The `lint-and-format` group (ESLint 10, Prettier 3.9.6) fails `pnpm format:check` only, on `docs/glossary.md` and `src/application/ports/config.port.ts`, which is a reformat, not a defect.
 
 **Pagination stays, and now has tests, but is still unproven end to end.** `shared/pagination` (`encodeCursor`/`decodeCursor`) and `interface/http/schemas/pagination.schema.ts` (`OffsetQuerySchema`, `CursorQuerySchema`) are deliberate out-of-the-box furniture for an example feature that hasn't been written yet, not dead code left by mistake. `test/unit/shared/pagination/cursor.spec.ts` and `test/unit/interface/http/schemas/pagination.spec.ts` now cover the encode/decode round trip, a truncated or tampered cursor being rejected outright instead of half-parsed, the offset/cursor boundary values, and the `orderBy` whitelist regex against a SQL-injection attempt. What they still can't prove is that a real repository or controller wires them up correctly — that only happens once the first paginated endpoint actually uses them.
 
@@ -49,7 +51,7 @@ Things a production service usually needs that this template does not provide at
 
 Judgement calls rather than defects. Disagree freely — but disagree on purpose.
 
-- **The documentation still outruns what is enforced.** Seventeen guides and eight decision records, all containing code that is never compiled. This is no longer a hypothetical: dropping `@nestjs/jwt` broke the e2e example in `write-tests.md` the same day, and nothing caught it — not the type-checker, not CI, not the coverage floor, only a human re-reading the file. Deleting a branch broke a second guide the same way. A test that extracts the TypeScript blocks and type-checks them would have failed on the first; a link/branch check would have caught the second. Until then, every dependency or branch change silently rots the pages agents copy from.
+- **The documentation still outruns what is enforced.** Eighteen guides and eight decision records, all containing code that is never compiled. This is no longer a hypothetical: dropping `@nestjs/jwt` broke the e2e example in `write-tests.md` the same day, and nothing caught it — not the type-checker, not CI, not the coverage floor, only a human re-reading the file. Deleting a branch broke a second guide the same way. A test that extracts the TypeScript blocks and type-checks them would have failed on the first; a link/branch check would have caught the second. Until then, every dependency or branch change silently rots the pages agents copy from.
 - **`shared` vs `common` vs `application/contracts`** is three buckets for cross-cutting code whose names don't say which is which, and the fence work just added a fourth address to learn (`@shared/metrics`). People will guess wrong. Merge them or rename them for what they are.
 - **There are two routes from a failure to an HTTP status**: a returned `Result.err` handled by the interceptor, and a thrown error handled by the filter. Both are documented and both work; two code paths for one outcome still drift eventually.
 - **The dialect placeholders promise portability the code doesn't have.** Five hand-written source schemas, one implemented client. Either implement a second dialect to prove the seam, or say plainly in the README that it is untested. (The lean sibling collapsed them to one passthrough shape, which is the cheaper half of this fix.)
@@ -59,7 +61,11 @@ Judgement calls rather than defects. Disagree freely — but disagree on purpose
 
 ## 4. What I'd fix first
 
-Section 1 is empty — every defect from the last two reviews is closed, and pagination was reclassified rather than fixed. What's left is section 2, roughly in this order:
+Every defect from the last two reviews is closed, and pagination was reclassified rather than fixed, so section 1 holds one item — and it goes first, because an unmergeable dependency queue gets worse every week it is left:
+
+1. **The red dependency bumps** — teach the typed tokens to satisfy `LoggerModuleAsyncParams` and `ThrottlerAsyncOptions`, then reformat the two files Prettier 3.9.6 disagrees with.
+
+Then section 2, roughly in this order:
 
 1. **Authorization beyond token roles** — `@Roles()` only reads what the issuer put in the token; permissions or policies stored in a database still need a project-specific guard.
 2. **A queue or a shipped outbox** — the outbox is a written recipe, not code, and cron is still the only background mechanism.
@@ -72,3 +78,4 @@ Those are decisions about your platform, not gaps in this repository.
 - The API container in `docker-compose.yml` has never been built or run here: Docker Desktop ran out of disk during the attempt, and the stack was used with Oracle in Docker and the API on the host.
 - The Windows service scripts are checked in a PowerShell container (`pnpm test:service-scripts`); registering the service on a real Windows machine is still unverified.
 - The live Oracle suite (`pnpm test:oracle`) and the service-script suite are not part of `pnpm verify` and did not run during this review.
+- `main` is pushed and CI is green on it. Nine Dependabot pull requests are open and unmerged as of 2026-09-19; seven are green, and the two red ones are the major bumps described in section 1. They stay red until someone fixes the code, so the dependency queue only grows from here.
