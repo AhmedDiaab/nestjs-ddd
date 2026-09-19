@@ -6,7 +6,12 @@
  * error log line, always on, independent of `SHOW_STACK_TRACES`.
  */
 
-const OWN_PATH_MARKERS = ['/src/', '/dist/'] as const;
+/**
+ * `/test/` is here so an error thrown inside a spec still names its line; a stack that passes
+ * through both is unaffected, since the scan is top-down and application frames sit above the
+ * spec that called them. Production stacks never contain `/test/`.
+ */
+const OWN_PATH_MARKERS = ['/src/', '/dist/', '/test/'] as const;
 const MAX_CAUSE_DEPTH = 10;
 
 interface ParsedFrame {

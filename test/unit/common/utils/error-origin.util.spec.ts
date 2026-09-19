@@ -112,6 +112,33 @@ describe('errorOrigin', () => {
         // Assert
         expect(origin).toBe('dist/domain/tickets/close.js:42 (TicketService.close)');
     });
+
+    it('names the spec line for an error thrown inside a test', () => {
+        // Arrange
+        const error = new Error('boom');
+        error.stack = stackOf('Object.<anonymous> (/repo/test/e2e/http-errors.e2e-spec.ts:46:15)');
+
+        // Act
+        const origin = errorOrigin(error);
+
+        // Assert
+        expect(origin).toBe('test/e2e/http-errors.e2e-spec.ts:46 (Object.<anonymous>)');
+    });
+
+    it('prefers the application frame over the spec frame that called it', () => {
+        // Arrange
+        const error = new Error('boom');
+        error.stack = stackOf(
+            'TicketService.close (/repo/src/domain/tickets/close.ts:42:11)',
+            'Object.<anonymous> (/repo/test/unit/domain/close.spec.ts:10:5)',
+        );
+
+        // Act
+        const origin = errorOrigin(error);
+
+        // Assert
+        expect(origin).toBe('src/domain/tickets/close.ts:42 (TicketService.close)');
+    });
 });
 
 describe('resolveErrorOrigin', () => {
