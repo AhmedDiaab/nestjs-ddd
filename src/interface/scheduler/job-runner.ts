@@ -53,11 +53,11 @@ export class JobRunner {
                 durationMs: Date.now() - started,
             });
             this.record('succeeded', started);
-        } catch (err) {
+        } catch (error) {
             this.logger.error('scheduler.job.failed', {
                 job: this.job.name,
                 durationMs: Date.now() - started,
-                err,
+                error,
             });
             this.record('failed', started);
         }

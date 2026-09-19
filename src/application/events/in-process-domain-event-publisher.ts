@@ -22,11 +22,11 @@ export class InProcessDomainEventPublisher implements DomainEventPublisherPort {
                 try {
                     await handler.handle(event);
                     this.metrics.increment(Metrics.domainEventsPublished, { event: event.name });
-                } catch (err) {
+                } catch (error) {
                     this.logger.error('domain.event.handler.failed', {
                         event: event.name,
                         handler: handler.constructor.name,
-                        err,
+                        error,
                     });
                     this.metrics.increment(Metrics.domainEventHandlerFailures, {
                         event: event.name,

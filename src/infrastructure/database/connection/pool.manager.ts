@@ -319,7 +319,7 @@ export class PoolManager implements ConnectionProviderContract, OnModuleDestroy 
         );
         for (const result of results) {
             if (result.status === 'rejected') {
-                this.logger.warn('db.pool.close.failed', { err: result.reason });
+                this.logger.warn('db.pool.close.failed', { error: result.reason });
             }
         }
         this.clients.clear();

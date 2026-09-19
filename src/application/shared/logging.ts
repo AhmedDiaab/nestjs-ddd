@@ -70,7 +70,7 @@ export interface LogMeta {
     };
 
     /** Optional attached error (structured object, not just string) */
-    err?: unknown;
+    error?: unknown;
 
     /** Allow extra ad-hoc metadata (e.g., userId, sessionId, etc.) */
     [key: string]: unknown;
