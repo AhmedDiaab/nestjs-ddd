@@ -143,6 +143,8 @@ File permissions: `TLS_KEY_FILE` must be readable only by the account the proces
 
 A bad path or an empty file fails at boot, not on the first HTTPS request — the same `❌ Invalid configuration:` line as any other invalid config ([Startup failures](#startup-failures)), naming the path and never the file's contents.
 
+**HSTS is already on.** `helmet()` sends `Strict-Transport-Security: max-age=31536000; includeSubDomains` on every response, with or without `TLS_ENABLED` — verified against the installed helmet rather than read from its docs. Over plain HTTP behind a terminator the header is simply ignored by browsers, which is why it has never mattered here. Once this process serves HTTPS itself, it binds: a browser that sees it will refuse plain HTTP to that host, **and to every subdomain**, for a year. Two consequences worth knowing before you enable TLS — test in a private window or on a throwaway hostname, because a browser pinned by a self-signed localhost experiment stays pinned; and if any subdomain must stay HTTP, override helmet's `hsts` option rather than discovering it in production.
+
 ### Manual verification
 
 No e2e test generates a certificate in-process — that would need a dependency this template doesn't otherwise carry, just to exercise a Node built-in. Check it by hand instead, with a throwaway self-signed pair generated **outside the repo**:
