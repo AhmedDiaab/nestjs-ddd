@@ -74,9 +74,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
                 return;
             }
 
-            const body = isRecord(rawResponse)
-                ? rawResponse
-                : { message: typeof rawResponse === 'string' ? rawResponse : undefined };
+            // A non-record response is either a string Nest was given, or a list of messages a
+            // pipe produced; anything else has no message worth showing and falls back to the status.
+            const body = isRecord(rawResponse) ? rawResponse : { message: toMessage(rawResponse) };
 
             const message = Array.isArray(body.message)
                 ? body.message.join('; ')
@@ -138,4 +138,13 @@ function asExposedClientError(
         message: typeof e.message === 'string' ? e.message : (HttpStatus[e.status] ?? 'Error'),
         type: typeof e.type === 'string' ? e.type : undefined,
     };
+}
+
+/** A non-record `HttpException` response carries a message only when it is a string or a list of them. */
+function toMessage(response: unknown): string | undefined {
+    if (typeof response === 'string') return response;
+    if (Array.isArray(response) && response.every((item) => typeof item === 'string')) {
+        return response.join('; ');
+    }
+    return undefined;
 }

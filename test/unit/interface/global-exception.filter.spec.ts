@@ -185,7 +185,7 @@ describe('GlobalExceptionFilter (behavioural)', () => {
         });
     });
 
-    it('falls back to the status name instead of stringifying a non-record response', () => {
+    it('joins a list of messages from a non-record response', () => {
         // Arrange
         const { logger } = createLoggerStub();
         const filter = new GlobalExceptionFilter(
@@ -195,6 +195,27 @@ describe('GlobalExceptionFilter (behavioural)', () => {
         );
         const hostBundle = createHost();
         const exception = new HttpException(['a', 'b'], HttpStatus.BAD_REQUEST);
+
+        // Act
+        filter.catch(exception, hostBundle.host);
+
+        // Assert
+        expect(hostBundle.json.mock.calls[0][0]).toMatchObject({
+            success: false,
+            error: { message: 'a; b' },
+        });
+    });
+
+    it('falls back to the status name instead of stringifying a response with no message in it', () => {
+        // Arrange
+        const { logger } = createLoggerStub();
+        const filter = new GlobalExceptionFilter(
+            new ErrorPresenter(),
+            createConfigStub(false),
+            logger,
+        );
+        const hostBundle = createHost();
+        const exception = new HttpException(42 as unknown as string, HttpStatus.BAD_REQUEST);
 
         // Act
         filter.catch(exception, hostBundle.host);

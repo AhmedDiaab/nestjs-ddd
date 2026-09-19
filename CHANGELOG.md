@@ -19,10 +19,11 @@ stay easy to scan.
   and `no-base-to-string` rules caught real issues, fixed rather than suppressed: `toString()` in
   `common/utils/parse-string.util.ts` now takes a `Stringifiable` union instead of `unknown` (a
   caller could previously pass a plain object and silently get `"[object Object]"` back), and
-  `GlobalExceptionFilter`'s non-record `HttpException` fallback only stringifies an actual string
-  response instead of any object.
+  `GlobalExceptionFilter`'s non-record `HttpException` fallback now reads a message only from a
+  string or a list of strings — anything else falls back to the status name instead of being
+  stringified into `"[object Object]"`.
 
-### Deferred
+**Deferred:**
 
 - The `@nestjs/*` 11→12 bump (plus `@nestjs/schedule` 6→12) stays deferred. Root cause and the
   revisit condition: [decision 0014](docs/decisions/0014-nestjs-12-deferred.md). In short:
