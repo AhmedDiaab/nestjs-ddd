@@ -2,7 +2,7 @@ import type { ConfigPort, LoggerPort } from '@application/ports';
 import { DatabaseExecutionError } from '@infrastructure/database/errors';
 import { ErrorPresenter } from '@interface/http/error-presenter';
 import { GlobalExceptionFilter } from '@interface/http/global-exception.filter';
-import { BadRequestException, HttpStatus } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import type { ArgumentsHost } from '@nestjs/common';
 
 jest.mock('dotenv-flow/config', () => undefined);
@@ -161,6 +161,72 @@ describe('GlobalExceptionFilter (behavioural)', () => {
         const payload = JSON.stringify(hostBundle.json.mock.calls[0][0]);
         expect(payload).not.toContain('ORA-20101');
         expect(payload).not.toContain('secret');
+    });
+
+    it('unwraps a plain string HttpException response into the message', () => {
+        // Arrange
+        const { logger } = createLoggerStub();
+        const filter = new GlobalExceptionFilter(
+            new ErrorPresenter(),
+            createConfigStub(false),
+            logger,
+        );
+        const hostBundle = createHost();
+        const exception = new HttpException('Plain text error', HttpStatus.FORBIDDEN);
+
+        // Act
+        filter.catch(exception, hostBundle.host);
+
+        // Assert
+        expect(hostBundle.status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
+        expect(hostBundle.json.mock.calls[0][0]).toMatchObject({
+            success: false,
+            error: { message: 'Plain text error' },
+        });
+    });
+
+    it('joins a list of messages from a non-record response', () => {
+        // Arrange
+        const { logger } = createLoggerStub();
+        const filter = new GlobalExceptionFilter(
+            new ErrorPresenter(),
+            createConfigStub(false),
+            logger,
+        );
+        const hostBundle = createHost();
+        const exception = new HttpException(['a', 'b'], HttpStatus.BAD_REQUEST);
+
+        // Act
+        filter.catch(exception, hostBundle.host);
+
+        // Assert
+        expect(hostBundle.json.mock.calls[0][0]).toMatchObject({
+            success: false,
+            error: { message: 'a; b' },
+        });
+    });
+
+    it('falls back to the status name instead of stringifying a response with no message in it', () => {
+        // Arrange
+        const { logger } = createLoggerStub();
+        const filter = new GlobalExceptionFilter(
+            new ErrorPresenter(),
+            createConfigStub(false),
+            logger,
+        );
+        const hostBundle = createHost();
+        const exception = new HttpException(42 as unknown as string, HttpStatus.BAD_REQUEST);
+
+        // Act
+        filter.catch(exception, hostBundle.host);
+
+        // Assert
+        const payload = JSON.stringify(hostBundle.json.mock.calls[0][0]);
+        expect(payload).not.toContain('[object Object]');
+        expect(hostBundle.json.mock.calls[0][0]).toMatchObject({
+            success: false,
+            error: { message: HttpStatus[HttpStatus.BAD_REQUEST] },
+        });
     });
 
     it('maps exposed body-parser errors to their 4xx status instead of 500', () => {

@@ -13,6 +13,16 @@ updates:
               patterns: ['@types/*']
           lint-and-format:
               patterns: ['eslint*', '@typescript-eslint/*', 'typescript-eslint', 'prettier*']
+      # @nestjs/* 12 breaks typecheck: @nestjs/throttler (up to 6.7.0, its latest) and
+      # @nest-lab/throttler-storage-redis (1.2.0, its latest) still import `ModuleMetadata`
+      # from the now-broken `@nestjs/common/interfaces` deep path, and the latter has no
+      # published @nestjs/common@^12 peer at all. See docs/decisions/0014-nestjs-12-deferred.md
+      # for the full root cause; revisit once both packages catch up.
+      ignore:
+          - dependency-name: '@nestjs/*'
+            update-types: ['version-update:semver-major']
+          - dependency-name: '@nestjs/schedule'
+            update-types: ['version-update:semver-major']
 
     - package-ecosystem: github-actions
       directory: /

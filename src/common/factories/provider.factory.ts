@@ -82,8 +82,7 @@ export class ProviderFactory {
     static existing<T>(token: DIToken, existing: DIToken): ExistingProvide<DIToken, T> {
         return {
             provide: token,
-            // Casting to InjectionToken is safe for Nest consumption.
-            useExisting: existing as InjectionToken,
+            useExisting: existing,
         };
     }
 

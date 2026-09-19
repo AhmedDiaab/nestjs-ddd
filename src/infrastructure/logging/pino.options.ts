@@ -7,7 +7,6 @@ import { isSafeCorrelationId } from '@shared';
 import type { Response } from 'express';
 import type { Params } from 'nestjs-pino';
 import type { TransportTargetOptions } from 'pino';
-import type { Options as PinoHttpOptions } from 'pino-http';
 
 function fileRotationTarget(config: ConfigPort): TransportTargetOptions | undefined {
     if (!config.get('logging.toFile')) return undefined;
@@ -124,6 +123,6 @@ export const generatePinoOptions = (config: ConfigPort): Params => {
                 if (isHealthCheck(req.url)) return 'silent';
                 return 'info';
             },
-        } as PinoHttpOptions,
+        },
     };
 };

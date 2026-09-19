@@ -39,7 +39,7 @@ Dependencies point inward: interface → application → domain. Infrastructure 
 | **Domain error**      | a rule refused the operation (`TicketAlreadyClosedError`)                            | maps to an HTTP status through its problem kind          |
 | **Read model**        | plain data shaped for a response (`TicketSummary`)                                   | JSON-safe: ISO date strings, `null`, no class instances  |
 | **Row type**          | the database's column layout (`TICKET_ID`, `STATUS_CODE`)                            | infrastructure only, never in domain or application      |
-| **Mapper**            | translates row ↔ aggregate / read model                                             | the only place that knows column names and codes         |
+| **Mapper**            | translates row ↔ aggregate / read model                                              | the only place that knows column names and codes         |
 
 ## Ports and adapters
 

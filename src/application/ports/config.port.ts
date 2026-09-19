@@ -8,15 +8,7 @@
 export interface ConfigValues {}
 
 type Leaf =
-    | string
-    | number
-    | boolean
-    | bigint
-    | symbol
-    | null
-    | undefined
-    | Date
-    | readonly unknown[];
+    string | number | boolean | bigint | symbol | null | undefined | Date | readonly unknown[];
 
 /** Every dot path into `T`, e.g. `'http'`, `'http.port'`, `'database.health.timeoutMs'`. */
 export type ConfigKey<T = ConfigValues> = {

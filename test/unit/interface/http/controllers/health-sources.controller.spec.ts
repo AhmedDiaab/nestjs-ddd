@@ -1,4 +1,4 @@
-import type { ConfigPort, DatabaseHealthPort, SourceHealthView } from '@application/ports';
+import type { ConfigPort, SourceHealthView } from '@application/ports';
 import { HealthSourcesController } from '@interface/http/controllers';
 
 const source = (overrides: Partial<SourceHealthView> = {}): SourceHealthView => ({
@@ -16,10 +16,7 @@ describe('HealthSourcesController', () => {
         const down = source({ key: 'reports', ok: false, error: 'NJS-503: connection refused' });
         const databaseHealth = { check: jest.fn(() => Promise.resolve([source(), down])) };
         const config = { get: () => 1000 } as unknown as ConfigPort;
-        const sut = new HealthSourcesController(
-            databaseHealth as unknown as DatabaseHealthPort,
-            config,
-        );
+        const sut = new HealthSourcesController(databaseHealth, config);
 
         // Act
         const result = await sut.list();
