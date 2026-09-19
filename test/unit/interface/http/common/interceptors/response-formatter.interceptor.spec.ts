@@ -81,7 +81,7 @@ describe('ResponseFormatterInterceptor test suite', () => {
 
     it('should return payload as is if it is buffer of similar type', async () => {
         // Arrange
-        body = Buffer.from([1, 2, 3]) as unknown as Buffer;
+        body = Buffer.from([1, 2, 3]);
 
         // Act
         const result = await lastValueFrom(sut.intercept(context, next));

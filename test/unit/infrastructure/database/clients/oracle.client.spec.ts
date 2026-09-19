@@ -1,5 +1,4 @@
 import { ConflictError, UnauthorizedError } from '@application/errors';
-import type { LoggerPort } from '@application/ports';
 import { OracleClient } from '@infrastructure/database/clients';
 import { DatabaseConnectionError, DatabaseExecutionError } from '@infrastructure/database/errors';
 import type { Connection, Pool } from 'oracledb';
@@ -41,11 +40,7 @@ describe('OracleClient', () => {
     const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
 
     const createClient = (overrides: Record<string, unknown> = {}) =>
-        new OracleClient(
-            pool as unknown as Pool,
-            oracleSource(overrides),
-            logger as unknown as LoggerPort,
-        );
+        new OracleClient(pool as unknown as Pool, oracleSource(overrides), logger);
 
     beforeEach(() => {
         connection = createConnection();

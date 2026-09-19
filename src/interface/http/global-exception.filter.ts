@@ -76,7 +76,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
             const body = isRecord(rawResponse)
                 ? rawResponse
-                : { message: String(rawResponse as unknown) };
+                : { message: typeof rawResponse === 'string' ? rawResponse : undefined };
 
             const message = Array.isArray(body.message)
                 ? body.message.join('; ')

@@ -165,13 +165,7 @@ describe('FetchHttpClient', () => {
         // Arrange
         // a Response body can be read once, so each attempt gets a fresh one
         const fetchImpl = jest.fn(() => Promise.resolve(jsonResponse(503, {})));
-        const sut = new FetchHttpClient(
-            configWith(),
-            logger,
-            contextWith(),
-            metrics,
-            fetchImpl as unknown as typeof fetch,
-        );
+        const sut = new FetchHttpClient(configWith(), logger, contextWith(), metrics, fetchImpl);
 
         // Act
         const response = await sut.request({
@@ -295,7 +289,7 @@ describe('FetchHttpClient', () => {
             logger,
             contextWith(),
             metrics,
-            fetchImpl as unknown as typeof fetch,
+            fetchImpl,
         );
         const call = () =>
             sut.request({

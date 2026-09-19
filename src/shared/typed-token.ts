@@ -9,5 +9,5 @@ export type TypedToken<T> = symbol & { readonly [tokenType]?: T };
 
 /** `Symbol.for` keeps tokens equal across duplicate module instances (jest, hot reload). */
 export function createToken<T>(name: string): TypedToken<T> {
-    return Symbol.for(name) as TypedToken<T>;
+    return Symbol.for(name);
 }

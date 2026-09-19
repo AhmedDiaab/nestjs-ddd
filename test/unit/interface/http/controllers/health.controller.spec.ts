@@ -1,10 +1,4 @@
-import type {
-    ConfigPort,
-    DatabaseHealthPort,
-    LoggerPort,
-    ShutdownPort,
-    SourceHealthView,
-} from '@application/ports';
+import type { ConfigPort, ShutdownPort, SourceHealthView } from '@application/ports';
 import { HealthController } from '@interface/http/controllers';
 import { ServiceUnavailableException } from '@nestjs/common';
 
@@ -25,12 +19,7 @@ describe('HealthController', () => {
         const warn = jest.fn();
         const logger = { debug: jest.fn(), info: jest.fn(), warn, error: jest.fn() };
         return {
-            controller: new HealthController(
-                databaseHealth as unknown as DatabaseHealthPort,
-                config,
-                shutdown,
-                logger as unknown as LoggerPort,
-            ),
+            controller: new HealthController(databaseHealth, config, shutdown, logger),
             databaseHealth,
             warn,
         };

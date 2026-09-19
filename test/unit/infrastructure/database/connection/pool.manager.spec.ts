@@ -1,5 +1,4 @@
 import { ConflictError } from '@application/errors';
-import type { LoggerPort } from '@application/ports';
 import { databaseConfigSchema } from '@infrastructure/config/schemas';
 import { PoolManager } from '@infrastructure/database/connection';
 import { AggregateDbHealthError, UnsupportedDialectError } from '@infrastructure/database/errors';
@@ -50,7 +49,7 @@ describe('PoolManager', () => {
             close: jest.fn(() => Promise.resolve()),
         };
         createPoolMock.mockResolvedValue(pool);
-        sut = new PoolManager(logger as unknown as LoggerPort);
+        sut = new PoolManager(logger);
     });
 
     afterEach(() => jest.clearAllMocks());
