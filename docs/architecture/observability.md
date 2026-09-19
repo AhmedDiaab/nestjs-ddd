@@ -86,4 +86,4 @@ Declare the metric in `PrometheusMetrics` first, and add its name to `src/shared
 
 ## Logs
 
-Structured JSON with the request id, trace id and span id on every line ([Logging](logging.md)). Successful health polls are not logged; bodies, headers and query strings are never logged by the HTTP client.
+Structured JSON with the request id, trace id and span id on every line ([Logging](logging.md)). Successful health polls are not logged; bodies, headers and query strings are never logged by the HTTP client. Every logged error also carries `origin` (and `causeOrigin` when the `cause` chain has a different app frame) — the one line of OUR code that created it, always on regardless of `SHOW_STACK_TRACES` (see [Logging → The `error` field](logging.md#the-error-field-origin-instead-of-a-stack-trace)).

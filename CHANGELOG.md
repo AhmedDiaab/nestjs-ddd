@@ -9,8 +9,38 @@ stay easy to scan.
 
 ## [Unreleased]
 
+### Added
+
+- Error logs now carry `origin` (and `causeOrigin`, when the error's `cause` chain has a
+  different app frame) — the one line of OUR code that created the error, e.g.
+  `src/infrastructure/database/dao/oracle-tickets.dao.ts:80 (OracleTicketsDao.findById)` —
+  computed by the new framework-free `errorOrigin`/`resolveErrorOrigin`
+  (`src/common/utils/error-origin.util.ts`), which scans a stack top-down for the first frame
+  that isn't `node_modules` or a `node:` internal instead of trusting the top frame. Always on,
+  independent of `SHOW_STACK_TRACES`; the response body sent to clients is unchanged. See
+  [decision 0010](docs/decisions/0010-error-origin.md).
+- `node --enable-source-maps` (Dockerfile `CMD`, `start:prod`, `start-service.ps1`) so `origin`/
+  `causeOrigin` name the `.ts` file and line in a production build.
+
 ### Changed
 
+- `AppError`/`DomainError` base constructors call `Error.captureStackTrace(this, new.target)`
+  (V8-only, guarded), so an error's own creation site is captured with the constructor frames
+  removed — this is what keeps `origin` accurate across `await` boundaries.
+- `GlobalExceptionFilter`'s log meta gained `origin`/`causeOrigin`; the existing `stack` key and
+  its `SHOW_STACK_TRACES` gate are unchanged.
+- Registered a pino `error` serializer (`src/infrastructure/logging/pino.options.ts`) that
+  replaces pino's default FULL, untrimmed-stack handling with
+  `{ type, message, origin, causeOrigin?, stack? }` for every call site that logs `{ error }` —
+  previously only `GlobalExceptionFilter` was gated by `SHOW_STACK_TRACES`; `job-runner.ts`,
+  `in-process-domain-event-publisher.ts`, `pool.manager.ts` and `oracle.client.ts` passed a raw
+  `Error` straight to the logger and leaked the full stack ungated. The same serializer is also
+  registered at pino-http's own literal `err` key (its automatic access-log line; a key this
+  template doesn't control) and unwraps pino-http's own pre-serialization to read the original
+  error's stack.
+- **Renamed the `LogMeta.err` field to `LogMeta.error`** (`src/application/shared/logging.ts`)
+  for a consistent, unabbreviated field name across every call site and the serializer; updated
+  `docs/architecture/logging.md` to match.
 - Bumped CI Actions to their latest majors: `actions/checkout` v4→v7, `actions/setup-node` v4→v7,
   `actions/upload-artifact` v4→v7, `pnpm/action-setup` v4→v6.
 - Bumped `@types/*`, `jest` (→30.5.1) and `@eslint/js` (→9.39.5) within their existing ranges.
@@ -22,6 +52,11 @@ stay easy to scan.
   `GlobalExceptionFilter`'s non-record `HttpException` fallback now reads a message only from a
   string or a list of strings — anything else falls back to the status name instead of being
   stringified into `"[object Object]"`.
+
+### Removed
+
+- The unused `source-map-support` devDependency — `--enable-source-maps` (a native `node` flag,
+  no dependency) now serves the same purpose for the built-in error `origin`/`causeOrigin`.
 
 **Deferred:**
 
