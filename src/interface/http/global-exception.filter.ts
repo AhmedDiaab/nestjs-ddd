@@ -1,6 +1,6 @@
 import type { ConfigPort, LoggerPort } from '@application/ports';
 import { ConfigPortToken, LoggerPortToken } from '@application/ports';
-import { formatStackTrace } from '@common/utils';
+import { formatStackTrace, resolveErrorOrigin } from '@common/utils';
 import {
     Catch,
     HttpException,
@@ -25,7 +25,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     /**
      * 5xx are always logged (with the cause chain); 4xx only as warn.
-     * Stack traces are included only when SHOW_STACK_TRACES=true.
+     * `origin`/`causeOrigin` (the app frame that threw) are always on; the full stack is
+     * included only when SHOW_STACK_TRACES=true.
      */
     private log(exception: unknown, status: number, req: Request, requestId: string): void {
         if (status < 400) return;
@@ -34,6 +35,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         const error = exception instanceof Error ? exception : undefined;
         const cause = (error as { cause?: unknown } | undefined)?.cause;
         const message = `[${requestId}] ${req.method} ${req.originalUrl} -> ${status} - ${error?.message ?? String(exception)}`;
+        const { origin, causeOrigin } = resolveErrorOrigin(exception);
 
         const meta = {
             correlationId: requestId,
@@ -41,6 +43,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             errorName: error?.name,
             cause:
                 cause instanceof Error ? { name: cause.name, message: cause.message } : undefined,
+            origin,
+            causeOrigin,
             stack: showStack ? formatStackTrace(error?.stack) : undefined,
         };
 

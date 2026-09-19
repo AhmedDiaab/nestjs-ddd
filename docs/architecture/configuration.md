@@ -33,16 +33,16 @@ Adding a variable: [Add a config variable](../guides/add-config-variable.md).
 
 ### Logging
 
-| Variable                            | Default            | Notes                                                   |
-| ----------------------------------- | ------------------ | ------------------------------------------------------- |
-| `LOG_LEVEL`                         | `info`             | `debug` \| `info` \| `warn` \| `error`                  |
-| `SHOW_STACK_TRACES`                 | `false`            | include trimmed stacks in error logs                    |
-| `REQUEST_ID_HEADER`                 | `x-request-id`     | incoming id reused; otherwise a UUID                    |
-| `LOGGING_TO_FILE`                   | `true`             | daily-rotated file via pino-roll                        |
-| `LOGGING_DIR` / `LOGGING_FILE_NAME` | `logs` / `app.log` |                                                         |
-| `LOGGING_FILES_LIMIT`               | `14`               | rotated files kept                                      |
-| `LOGGING_MAX_SIZE`                  | `10m`              | per file; `b`/`k`/`m`/`g`                               |
-| `LOGGING_PRETTY`                    | development only   | needs `pino-pretty` (devDependency); falls back to JSON |
+| Variable                            | Default            | Notes                                                                                     |
+| ----------------------------------- | ------------------ | ----------------------------------------------------------------------------------------- |
+| `LOG_LEVEL`                         | `info`             | `debug` \| `info` \| `warn` \| `error`                                                    |
+| `SHOW_STACK_TRACES`                 | `false`            | include trimmed stacks in error logs; `origin`/`causeOrigin` are always logged regardless |
+| `REQUEST_ID_HEADER`                 | `x-request-id`     | incoming id reused; otherwise a UUID                                                      |
+| `LOGGING_TO_FILE`                   | `true`             | daily-rotated file via pino-roll                                                          |
+| `LOGGING_DIR` / `LOGGING_FILE_NAME` | `logs` / `app.log` |                                                                                           |
+| `LOGGING_FILES_LIMIT`               | `14`               | rotated files kept                                                                        |
+| `LOGGING_MAX_SIZE`                  | `10m`              | per file; `b`/`k`/`m`/`g`                                                                 |
+| `LOGGING_PRETTY`                    | development only   | needs `pino-pretty` (devDependency); falls back to JSON                                   |
 
 ### HTTP
 

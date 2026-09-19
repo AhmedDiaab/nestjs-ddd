@@ -40,6 +40,11 @@ class ValidationProbeController {
     list(@Validated('query') query: { page: number }) {
         return query;
     }
+
+    @Get('boom')
+    boom() {
+        throw new Error('unexpected failure with a secret file path in its stack');
+    }
 }
 
 describe('HTTP error responses (e2e)', () => {
@@ -153,5 +158,24 @@ describe('HTTP error responses (e2e)', () => {
         // Assert
         expect(res.status).toBe(200);
         expect(res.body).toMatchObject({ success: true, data: { page: 2 } });
+    });
+
+    it('never leaks the error origin, a stack trace or a file path to the client', async () => {
+        // Arrange
+        const path = '/v1/e2e-validation/boom';
+
+        // Act
+        const res = await request(app.getHttpServer()).get(path);
+
+        // Assert
+        expect(res.status).toBe(500);
+        const payload = JSON.stringify(res.body);
+        expect(res.body).not.toHaveProperty('origin');
+        expect(res.body).not.toHaveProperty('stack');
+        expect((res.body as ErrorEnvelope).error).not.toHaveProperty('origin');
+        expect((res.body as ErrorEnvelope).error).not.toHaveProperty('stack');
+        expect(payload).not.toContain('.ts');
+        expect(payload).not.toContain('/src/');
+        expect(payload).not.toContain('node_modules');
     });
 });

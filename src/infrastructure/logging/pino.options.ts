@@ -3,6 +3,7 @@ import { type IncomingMessage } from 'node:http';
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import type { ConfigPort } from '@application/ports';
+import { formatStackTrace, resolveErrorOrigin } from '@common/utils';
 import { isSafeCorrelationId } from '@shared';
 import type { Response } from 'express';
 import type { Params } from 'nestjs-pino';
@@ -62,11 +63,51 @@ export function isHealthCheck(url: string | undefined): boolean {
     return !!url && /^\/health(\/ready)?\/?(\?.*)?$/.test(url);
 }
 
+/**
+ * pino-http wraps whatever serializer sits at its error key as
+ * `(value) => customSerializer(defaultErrSerializer(value))` (pino-std-serializers'
+ * `wrapErrorSerializer`, `lib/err.js`) — by the time our serializer runs, `value` is already
+ * pino's own flattened `{ type, message, stack, raw: <original error> }`, not the original
+ * `Error`. `raw` is the untouched original, so unwrapping it keeps `origin`/`causeOrigin`
+ * accurate for that path too, instead of silently falling back to `typeof value`.
+ */
+function unwrapRaw(value: unknown): unknown {
+    if (typeof value === 'object' && value !== null && 'raw' in value) {
+        return (value as { raw?: unknown }).raw ?? value;
+    }
+    return value;
+}
+
+/**
+ * Replaces pino's default error handling (which serializes the FULL untrimmed stack, ungated)
+ * for every `meta.error` passed to the logger — job-runner, the domain event publisher, the
+ * connection pool, the Oracle client — not just `GlobalExceptionFilter`. `origin`/`causeOrigin`
+ * are always on; the stack is included only when `SHOW_STACK_TRACES=true`, and then trimmed the
+ * same way.
+ */
+function errorSerializer(config: ConfigPort) {
+    return (value: unknown) => {
+        const source = unwrapRaw(value);
+        const error = source instanceof Error ? source : undefined;
+        const { origin, causeOrigin } = resolveErrorOrigin(source);
+        const showStack = !!config.get('logging.showStackTraces');
+
+        return {
+            type: error?.name ?? typeof source,
+            message: error?.message ?? String(source),
+            origin,
+            causeOrigin,
+            stack: showStack ? formatStackTrace(error?.stack) : undefined,
+        };
+    };
+}
+
 export const generatePinoOptions = (config: ConfigPort): Params => {
     const requestIdHeader = config.get('logging.requestIdHeader');
     const targets = [fileRotationTarget(config), consoleTarget(config)].filter(
         (target): target is TransportTargetOptions => !!target,
     );
+    const serializeError = errorSerializer(config);
 
     return {
         pinoHttp: {
@@ -101,6 +142,13 @@ export const generatePinoOptions = (config: ConfigPort): Params => {
                 res: (res: Response) => ({
                     statusCode: res.statusCode,
                 }),
+                // our own call sites (`logger.error(message, { error })`)
+                error: serializeError,
+                // pino-http's own automatic access-log line builds its error object under the
+                // literal key `err` (pino-http/logger.js: `[errKey]: error`, `errKey` defaults to
+                // 'err') — a key this template doesn't control. Same serializer, so that line is
+                // trimmed too instead of falling back to pino's default full-stack serializer.
+                err: serializeError,
             },
             customProps: (req: IncomingMessage) => ({
                 env: config.get('app.env'),
@@ -112,12 +160,15 @@ export const generatePinoOptions = (config: ConfigPort): Params => {
             customSuccessMessage(req, res) {
                 return `OK ${req.method} ${req.url} ${res.statusCode}`;
             },
-            customErrorMessage(req, res, err) {
-                return `ERR ${req.method} ${req.url} ${res.statusCode} - ${err.message}`;
+            customErrorMessage(req, res, error) {
+                return `ERR ${req.method} ${req.url} ${res.statusCode} - ${error.message}`;
             },
-            // 5xx are logged with details by GlobalExceptionFilter; keep one access-log line here
-            customLogLevel(req, res, err) {
-                if (err || res.statusCode >= 500) return 'error';
+            // 5xx are logged with details by GlobalExceptionFilter; keep one access-log line here.
+            // `error` here is pino-http's own request/response error (its 3rd callback argument,
+            // e.g. `res.err` set by Express error middleware) — not our `LogMeta.error` field, so
+            // there is no second key to read: the two never overlap.
+            customLogLevel(req, res, error) {
+                if (error || res.statusCode >= 500) return 'error';
                 if (res.statusCode >= 400) return 'warn';
                 // monitoring tools poll health endpoints; keep successful polls out of the logs
                 if (isHealthCheck(req.url)) return 'silent';

@@ -51,7 +51,7 @@ describe('JobRunner', () => {
         await expect(call).resolves.toBeUndefined();
         expect(error).toHaveBeenCalledWith(
             'scheduler.job.failed',
-            expect.objectContaining({ job: 'tickets.closeStale', err: failure }),
+            expect.objectContaining({ job: 'tickets.closeStale', error: failure }),
         );
     });
 

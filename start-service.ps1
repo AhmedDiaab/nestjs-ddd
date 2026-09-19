@@ -4,8 +4,9 @@
     Installs (or reinstalls) the API as a Windows service with NSSM and starts it.
 
 .DESCRIPTION
-    - Runs `node dist\main.js` directly (no npm wrapper), so stop signals reach Node
-      and Nest shutdown hooks can drain database pools.
+    - Runs `node --enable-source-maps dist\main.js` directly (no npm wrapper), so stop signals
+      reach Node, Nest shutdown hooks can drain database pools, and error logs' origin/causeOrigin
+      name the .ts file and line instead of the compiled dist/*.js one.
     - Only NODE_ENV is set on the service. dotenv-flow loads `.env.<Environment>` from the
       app directory at startup, with the same parsing as local development
       (quotes, inline comments). Secrets are not copied into the service registry.
@@ -106,7 +107,8 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 Write-Host "Installing service '$ServiceName' (node $nodeVersion, NODE_ENV=$Environment)..."
-Invoke-Nssm install $ServiceName $NodePath $EntryFile
+# --enable-source-maps: error logs' origin/causeOrigin name the .ts file and line, not dist/*.js
+Invoke-Nssm install $ServiceName $NodePath "--enable-source-maps" $EntryFile
 
 Write-Host "Configuring service..."
 Invoke-Nssm set $ServiceName AppDirectory $AppDir

@@ -80,7 +80,7 @@ export class OracleClient implements DatabaseClient {
                     this.logger.warn('db.rollback.failed', {
                         sourceKey: this.sourceKey,
                         tag: options?.tag,
-                        err: rollbackError,
+                        error: rollbackError,
                     });
                 }
                 throw e;
@@ -150,12 +150,12 @@ export class OracleClient implements DatabaseClient {
                 connection.clientId = '';
                 connection.callTimeout = this.source.poolPingTimeoutMs || 5000;
                 await connection.ping(); // round trip that carries the cleared identifier
-            } catch (e) {
+            } catch (error) {
                 drop = true;
                 this.logger.warn('db.context.clear.failed', {
                     sourceKey: this.sourceKey,
                     action: 'drop-connection',
-                    err: e,
+                    error,
                 });
             }
         }
@@ -163,8 +163,11 @@ export class OracleClient implements DatabaseClient {
         try {
             connection.callTimeout = this.source.callTimeoutMs;
             await connection.close({ drop });
-        } catch (e) {
-            this.logger.warn('db.connection.release.failed', { sourceKey: this.sourceKey, err: e });
+        } catch (error) {
+            this.logger.warn('db.connection.release.failed', {
+                sourceKey: this.sourceKey,
+                error,
+            });
         }
     }
 
