@@ -30,6 +30,19 @@ A third, independent blocker: `@nest-lab/throttler-storage-redis@1.2.0` (latest 
 
 A fourth, lower-severity one: `@nestjs/schematics@12.0.3` requires `typescript@>=6.0.0`; this project is pinned to TypeScript 5 (a deliberate stack choice per `AGENTS.md`), so that peer is unmet by design, not by oversight.
 
+### What Nest's own migration guide says
+
+The findings above were reached by reading the packages; the [official v11 → v12 migration guide](https://docs.nestjs.com/migration-guide) agrees with them and adds three things worth writing down.
+
+It confirms the mechanism rather than contradicting it: all core Nest packages now ship as ESM with an `exports` map, and deep imports into subpaths are no longer resolvable — the guide's instruction is to import from the package root instead, which is exactly the fix `nestjs-pino@5.2.0` applied and `@nestjs/throttler` has not.
+
+It also says a CommonJS application does **not** have to convert to ESM: Node's `require(esm)` keeps it working. So the runtime was never this template's blocker — the failure is purely at the type level, in a dependency's `.d.ts`, and it bites here precisely because `tsconfig.json` already sets `module`/`moduleResolution: nodenext` with `resolvePackageJsonExports: true`, which is the configuration the guide prescribes. A project still on `moduleResolution: node` would not see the error at all; being correctly configured is what exposes it.
+
+Two further requirements apply when the upgrade does happen:
+
+- **Node**: running v12 needs v20.19+, v22.12+ or v24+ (this template's 22.18.0 qualifies), but the **CLI** — which `pnpm build` uses through `nest build` — needs v22.22.3+, v24.15+ or v26+. `.nvmrc` and `engines.node` must move with the upgrade.
+- **Behaviour**: `@Optional()` is no longer inherited by subclasses (this template uses it once, on a constructor parameter in `metrics.controller.ts`, not through inheritance — unaffected), and lifecycle hooks now run ordered by component hierarchy level, which is worth re-checking against `job-scheduler.ts` and `pool.manager.ts`. Terminus, NATS and GraphQL breaking changes do not apply here.
+
 ## Decision
 
 Do not force the `@nestjs/*` 11→12 bump. `@nestjs/throttler` has no version whose type declarations resolve against `@nestjs/common@12`'s new `exports` map, and `@nest-lab/throttler-storage-redis` has no version that declares a `^12` peer at all — both are upstream gaps this repository cannot close by itself. Patching around them (stub `imports: []`/`providers: []` to satisfy the broken types, or vendoring a type-only shim for `@nestjs/common/interfaces`) would be lying to the type checker about a real upstream defect, not fixing our code — the `inject` arrays this template deliberately types ([0002](0002-typed-di-tokens.md)) were never the problem.
@@ -40,5 +53,5 @@ Do not force the `@nestjs/*` 11→12 bump. `@nestjs/throttler` has no version wh
 
 - `@nestjs/common`, `core`, `passport`, `platform-express`, `swagger`, `cli`, `schematics`, `testing` and `@nestjs/schedule` stay on their 11.x / 6.x lines.
 - `pnpm typecheck` stays green; `throttling.module.ts` and `pino.module.ts` are unchanged.
-- **Revisit when**: `@nestjs/throttler` ships a version whose `.d.ts` imports `ModuleMetadata` from `'@nestjs/common'` instead of `'@nestjs/common/interfaces'` (or otherwise resolves under `moduleResolution: nodenext` against `@nestjs/common@12`), **and** `@nest-lab/throttler-storage-redis` (or its replacement) declares a `@nestjs/common@^12` peer. Bumping `nestjs-pino` to `5.x` can happen independently and earlier, since it already fixed its side — but it is a separate change with its own migration (a new `@nestjs/core` peer, and whatever behavioural changes ride along with its major), tracked separately from this deferral.
+- **Revisit when**: `@nestjs/throttler` ships a version whose `.d.ts` imports `ModuleMetadata` from `'@nestjs/common'` instead of `'@nestjs/common/interfaces'` (or otherwise resolves under `moduleResolution: nodenext` against `@nestjs/common@12`), **and** `@nest-lab/throttler-storage-redis` (or its replacement) declares a `@nestjs/common@^12` peer. The upgrade then also carries a Node bump (`.nvmrc` and `engines.node` to at least 22.22.3, for the CLI) and a re-check of lifecycle-hook ordering. Bumping `nestjs-pino` to `5.x` can happen independently and earlier, since it already fixed its side — but it is a separate change with its own migration (a new `@nestjs/core` peer, and whatever behavioural changes ride along with its major), tracked separately from this deferral.
 - Until then, `docs/known-gaps.md` carries this as the template's one open dependency gap.
