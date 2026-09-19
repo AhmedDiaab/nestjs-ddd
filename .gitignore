@@ -61,3 +61,11 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Logs
 logs/
+
+# TLS certificates and keys (local development only; see docs/architecture/operations.md § TLS)
+*.pem
+*.key
+*.crt
+*.cer
+*.pfx
+*.p12
