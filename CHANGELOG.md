@@ -21,8 +21,23 @@ stay easy to scan.
   [decision 0010](docs/decisions/0010-error-origin.md).
 - `node --enable-source-maps` (Dockerfile `CMD`, `start:prod`, `start-service.ps1`) so `origin`/
   `causeOrigin` name the `.ts` file and line in a production build.
+- Optional in-process TLS termination (`TLS_ENABLED`, default `false`) for deployments with no
+  reverse proxy or load balancer in front of the app — the Windows service install in particular.
+  `src/infrastructure/tls/load-tls-options.ts` reads `TLS_KEY_FILE`/`TLS_CERT_FILE` (and
+  optionally `TLS_CA_FILE`, `TLS_PASSPHRASE`, `TLS_MIN_VERSION`) once at bootstrap, before Nest
+  starts; a bad or missing path fails at boot with the path named and never the file's contents
+  (`InvalidConfigError`, same as any other invalid config), and the startup log line prints
+  `https://` instead of `http://` when it's on. Terminating TLS at the proxy stays the default.
+  `.gitignore` now excludes `*.pem`, `*.key`, `*.crt`, `*.cer`, `*.pfx`, `*.p12` so a local
+  development certificate can't be committed by accident. See [decision
+  0011](docs/decisions/0011-tls-optional-in-process.md) and `docs/architecture/operations.md` §
+  TLS.
 
 ### Changed
+
+- `EnvConfigAdapter`'s constructor now optionally accepts an already-loaded `AppConfig`, so
+  `main.ts`'s early TLS config read (needed before Nest — and DI — exists) reuses it instead of
+  parsing `process.env` a second time to build the `ConfigPort` that `loadTlsOptions` needs.
 
 - `AppError`/`DomainError` base constructors call `Error.captureStackTrace(this, new.target)`
   (V8-only, guarded), so an error's own creation site is captured with the constructor frames

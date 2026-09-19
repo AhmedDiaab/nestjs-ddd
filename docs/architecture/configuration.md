@@ -64,6 +64,21 @@ Adding a variable: [Add a config variable](../guides/add-config-variable.md).
 
 `main.ts` starts Nest with `rawBody: true`, so every parsed request has its exact bytes buffered onto `req.rawBody` — `IdempotencyInterceptor` needs them to fingerprint a request without being fooled by a re-serialized body. `JSON_BODY_LIMIT` / `URLENCODED_BODY_LIMIT` still cap how large that buffered body (and therefore the memory it holds per in-flight request) can be; they were not changed for this, but it is worth knowing the raw bytes are now held in memory for the lifetime of the request, not just parsed and discarded.
 
+### TLS
+
+Optional in-process TLS termination — off by default, since a load balancer/VIP usually terminates TLS instead ([Operations → TLS](operations.md#tls)).
+
+| Variable          | Default   | Notes                                                                   |
+| ----------------- | --------- | ----------------------------------------------------------------------- |
+| `TLS_ENABLED`     | `false`   | terminate TLS in this process instead of a load balancer/VIP            |
+| `TLS_KEY_FILE`    | –         | path to the PEM private key; required when `TLS_ENABLED=true`           |
+| `TLS_CERT_FILE`   | –         | path to the PEM certificate (chain); required when `TLS_ENABLED=true`   |
+| `TLS_CA_FILE`     | –         | path to an extra PEM trust chain; optional even when `TLS_ENABLED=true` |
+| `TLS_PASSPHRASE`  | –         | decrypts an encrypted private key; treat as a secret, never logged      |
+| `TLS_MIN_VERSION` | `TLSv1.2` | `TLSv1.2` \| `TLSv1.3`                                                  |
+
+A bad or missing path fails at boot: `loadTlsOptions` (`src/infrastructure/tls/load-tls-options.ts`) reads the files once, before Nest starts, and throws `InvalidConfigError` naming the path, never the file's contents.
+
 ### Idempotency
 
 Backs `@Idempotent()` ([guide](../guides/make-an-endpoint-idempotent.md)).
