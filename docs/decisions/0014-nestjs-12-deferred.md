@@ -49,6 +49,18 @@ Do not force the `@nestjs/*` 11→12 bump. `@nestjs/throttler` has no version wh
 
 `.github/dependabot.yml`'s `nestjs` group gets an `ignore` entry so the PR stops reopening every week until upstream catches up.
 
+### There is a forced path, and it is deliberately not taken
+
+The upgrade _can_ be made to compile today: a `tsconfig` `paths` entry mapping `@nestjs/common/interfaces` to the real `node_modules/@nestjs/common/interfaces/index.d.ts` (the directory still ships), a pnpm peer override for `@nest-lab/throttler-storage-redis`, Node raised to 22.22.3+ for the CLI, and TypeScript 6. That is two workarounds, a Node floor bump and a compiler major, in exchange for nothing a user of this template can see — the application stays CommonJS, so v12's ESM change is invisible at runtime, and 11.1.6 is current and patched.
+
+The template argument decides it: every fork inherits those two workarounds and the obligation to remove them later. Shipping a starting point that opens with a shim for an upstream bug the reader has never heard of is worse here than the same shim would be in one application.
+
+The concrete risk if it were taken anyway is not the shims but v12's lifecycle-hook reordering, which lands on `job-scheduler.ts` and `pool.manager.ts` — the two places where this codebase's ordering is load-bearing and was verified against a real `SIGTERM` ([Operations](../architecture/operations.md#graceful-shutdown)).
+
+### TypeScript ceiling
+
+Independently of Nest: `typescript-eslint@8.70.0` peers `typescript >=4.8.4 <6.1.0` and `ts-jest@29.4.12` peers `>=4.3 <7`, and no published version of either supports TypeScript 7 — the native Go port breaks every tool that embeds the compiler API. **6.0.3 is the highest version this repository can take**, and it is what `@nestjs/schematics@12` asks for, so TypeScript 7 would cost `lint`, `lint:test`, `test` and `test:e2e` while buying nothing. The repo stays on 5.9.x until the Nest upgrade makes 6.x worth doing in the same branch; the `tsconfig` files are already written in TS 6 terms (explicit `types`, no `baseUrl`, `nodenext` resolution, `esModuleInterop` on), so that part is a no-op when the day comes.
+
 ## Consequences
 
 - `@nestjs/common`, `core`, `passport`, `platform-express`, `swagger`, `cli`, `schematics`, `testing` and `@nestjs/schedule` stay on their 11.x / 6.x lines.
