@@ -7,9 +7,14 @@ import { loadConfig, type AppConfig } from './load-config';
 export class EnvConfigAdapter implements ConfigPort {
     private readonly config: AppConfig;
 
-    constructor() {
+    /**
+     * `config` lets a caller that already validated one (e.g. `main.ts`'s early TLS read, which
+     * must run before Nest — and therefore DI — exists) reuse it instead of parsing env twice.
+     * Omitted, this validates from `process.env` itself, as every DI-constructed instance does.
+     */
+    constructor(config?: AppConfig) {
         this.loadEnv();
-        this.config = loadConfig();
+        this.config = config ?? loadConfig();
     }
 
     private loadEnv(): void {

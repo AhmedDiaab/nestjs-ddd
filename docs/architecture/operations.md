@@ -126,6 +126,42 @@ Per-source detail moved behind a token: `GET /v1/health/sources` (subject to the
 | `AggregateDbHealthError` at boot                        | a required DB source failed its pings                     |
 | `DatabaseConnectionError ... Failed to acquire` at boot | pool creation failed (credentials, network, service name) |
 
+## TLS
+
+**Default: terminate TLS in front of the app** — a load balancer, VIP, ingress or reverse proxy — and let the app speak plain HTTP behind it. This is what [Migrate a legacy service](../guides/migrate-a-legacy-service.md) assumes, and it stays the right choice whenever such a terminator exists: certificate rotation, ALPN/HTTP2 negotiation and TLS version policy all become the terminator's job instead of this app's.
+
+Set `TLS_ENABLED=true` only when no terminator sits in front of this process — chiefly the [Windows service](#windows-service-nssm) install, which drops `node dist/main.js` straight onto a host with nothing in front of it by default. With it on, `main.ts` reads `TLS_KEY_FILE`/`TLS_CERT_FILE` (and optionally `TLS_CA_FILE`, `TLS_PASSPHRASE`, `TLS_MIN_VERSION`) once at bootstrap, before Nest starts, and passes them to `NestFactory.create` as `httpsOptions`; the server then listens for HTTPS directly, and the startup log line prints `https://` instead of `http://` so which mode is live is obvious at a glance. See [decision 0011](../decisions/0011-tls-optional-in-process.md).
+
+`TLS_ENABLED` and `TRUST_PROXY` ([Configuration → HTTP](configuration.md#http)) answer two different questions and are normally opposites of each other:
+
+| Variable      | Question it answers                                                  | Behind a load balancer | No terminator (e.g. Windows service) |
+| ------------- | -------------------------------------------------------------------- | ---------------------- | ------------------------------------ |
+| `TRUST_PROXY` | Did an upstream already terminate TLS and forward `X-Forwarded-For`? | `true`                 | `false`                              |
+| `TLS_ENABLED` | Does _this process_ need to terminate TLS itself?                    | `false`                | `true`                               |
+
+File permissions: `TLS_KEY_FILE` must be readable only by the account the process runs as — the same account NSSM (or systemd) runs the service under. Treat it like any other secret: not group- or world-readable, never committed (`.gitignore` excludes `*.pem`, `*.key`, `*.crt`, `*.cer`, `*.pfx`, `*.p12`), rotated the way `JWT_SECRET` or a database password would be.
+
+A bad path or an empty file fails at boot, not on the first HTTPS request — the same `❌ Invalid configuration:` line as any other invalid config ([Startup failures](#startup-failures)), naming the path and never the file's contents.
+
+**HSTS is already on.** `helmet()` sends `Strict-Transport-Security: max-age=31536000; includeSubDomains` on every response, with or without `TLS_ENABLED` — verified against the installed helmet rather than read from its docs. Over plain HTTP behind a terminator the header is simply ignored by browsers, which is why it has never mattered here. Once this process serves HTTPS itself, it binds: a browser that sees it will refuse plain HTTP to that host, **and to every subdomain**, for a year. Two consequences worth knowing before you enable TLS — test in a private window or on a throwaway hostname, because a browser pinned by a self-signed localhost experiment stays pinned; and if any subdomain must stay HTTP, override helmet's `hsts` option rather than discovering it in production.
+
+### Manual verification
+
+No e2e test generates a certificate in-process — that would need a dependency this template doesn't otherwise carry, just to exercise a Node built-in. Check it by hand instead, with a throwaway self-signed pair generated **outside the repo**:
+
+```bash
+openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 1 -subj "/CN=localhost"
+TLS_ENABLED=true TLS_KEY_FILE=$(pwd)/key.pem TLS_CERT_FILE=$(pwd)/cert.pem pnpm start:dev
+```
+
+Then, from another terminal:
+
+```bash
+curl -k https://localhost:3000/health   # -k: self-signed cert, not in curl's trust store
+```
+
+A plain `curl http://localhost:3000/health` fails (connection reset) once TLS is enabled — there is no plain-HTTP listener alongside it. Delete the throwaway key/cert afterwards.
+
 ## Graceful shutdown
 
 On `SIGTERM`/`SIGINT` (Ctrl+C) the process shuts down in the order a load balancer expects:

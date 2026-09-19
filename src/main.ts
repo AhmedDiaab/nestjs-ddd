@@ -1,8 +1,9 @@
 import type { Server as HttpServer } from 'node:http';
 import type { ConfigPort, LoggerPort, ShutdownPort } from '@application/ports';
 import { ConfigPortToken, LoggerPortToken, ShutdownPortToken } from '@application/ports';
-import { InvalidConfigError } from '@infrastructure/config';
+import { EnvConfigAdapter, InvalidConfigError, loadConfig } from '@infrastructure/config';
 import { runGracefulShutdown } from '@infrastructure/lifecycle';
+import { loadTlsOptions } from '@infrastructure/tls';
 import { setupSwagger } from '@interface/http/swagger';
 import { JobScheduler } from '@interface/scheduler';
 import { VersioningType } from '@nestjs/common';
@@ -14,7 +15,15 @@ import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+    // `httpsOptions` must be known before `NestFactory.create` builds the HTTP server, so this
+    // one read happens before DI exists. `loadConfig()` is pure (env → Zod, no side effects) and
+    // is the same function `ConfigModule`'s `EnvConfigAdapter` calls; every other read below goes
+    // through the injected `ConfigPort`. (Cluster mode will reuse this same early read.)
+    const bootstrapConfig = loadConfig();
+    const httpsOptions = loadTlsOptions(new EnvConfigAdapter(bootstrapConfig));
+
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+        ...(httpsOptions ? { httpsOptions } : {}),
         bufferLogs: true,
         bodyParser: false, // configured below with limits from config
         rawBody: true, // req.rawBody, for IdempotencyInterceptor's fingerprint
@@ -69,8 +78,9 @@ async function bootstrap() {
 
     installShutdownHandlers(app, server, config);
 
+    const scheme = httpsOptions ? 'https' : 'http';
     logger.log(
-        `API listening on http://localhost:${port} [${env}]${swaggerPath ? ` docs: /${swaggerPath}` : ''}`,
+        `API listening on ${scheme}://localhost:${port} [${env}]${swaggerPath ? ` docs: /${swaggerPath}` : ''}`,
     );
 }
 
