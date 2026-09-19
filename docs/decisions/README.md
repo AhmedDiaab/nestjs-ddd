@@ -12,6 +12,7 @@ Short records of choices that shape the codebase. Read the relevant one before c
 | [0006](0006-singleton-providers.md)           | Singleton providers; no request-scoped DI                                          | Accepted |
 | [0007](0007-named-barrel-exports.md)          | Barrels list named exports; no `export *`                                          | Accepted |
 | [0008](0008-one-thing-per-file.md)            | One thing per file (one class, decorator or helper; ESLint `max-classes-per-file`) | Accepted |
+| [0014](0014-nestjs-12-deferred.md)            | Defer the `@nestjs/*` 12 upgrade (upstream type breakage, not our code)            | Accepted |
 
 Template for a new record (`NNNN-short-title.md`):
 
