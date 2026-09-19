@@ -69,6 +69,34 @@ describe('loadConfig', () => {
         expect(config.database?.oracle.fetchAsString).toEqual(['CLOB', 'NUMBER']);
     });
 
+    it('loads TLS config from env, defaulting to disabled', () => {
+        // Arrange: only BASE_ENV is set
+
+        // Act
+        const config = loadConfig();
+
+        // Assert
+        expect(config.tls).toMatchObject({ enabled: false, minVersion: 'TLSv1.2' });
+    });
+
+    it('requires TLS_KEY_FILE and TLS_CERT_FILE when TLS_ENABLED=true', () => {
+        // Arrange
+        process.env = { ...BASE_ENV, TLS_ENABLED: 'true' };
+
+        // Act
+        let error: unknown;
+        try {
+            loadConfig();
+        } catch (e) {
+            error = e;
+        }
+
+        // Assert
+        expect(error).toBeInstanceOf(InvalidConfigError);
+        expect((error as Error).message).toContain('TLS_KEY_FILE');
+        expect((error as Error).message).toContain('TLS_CERT_FILE');
+    });
+
     it('never includes secret values in validation errors', () => {
         // Arrange
         process.env = {
