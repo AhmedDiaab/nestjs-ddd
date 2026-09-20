@@ -33,14 +33,16 @@ Options B and C mean requests pass through an extra hop while the migration runs
 
 ### If you take option B (new service in front)
 
-The template has no built-in forwarder; add one as a small piece of infrastructure and keep it dumb:
+The template ships a forwarder: `src/infrastructure/legacy/`, wired from `src/main.ts`, kept dumb on purpose ([decision 0013](../decisions/0013-legacy-forwarder-is-dumb-transport.md)):
 
-- Forward **only** what is not migrated: match the paths your controllers don't serve, and let `FallbackController` keep answering 404 for genuinely unknown paths.
-- Stream request and response bodies through unchanged; don't parse them, don't re-wrap them in the envelope, don't log bodies.
-- Pass through `Authorization`, cookies, the request-id header (`REQUEST_ID_HEADER`) and `X-Forwarded-For`; add the client IP if it is missing.
-- Give the forwarder its own timeout (below the VIP's) and log `legacy.forward.failed` with the path and status, never the body.
-- On a legacy failure return the legacy status as it is; don't turn it into a 500.
-- Keep a single list of forwarded prefixes in config so shrinking it is one deployment.
+- Forward **only** what is not migrated: `LEGACY_FORWARD_PREFIXES` lists the path prefixes to send on; everything else still answers through this app, and `FallbackController` keeps answering 404 for genuinely unknown paths.
+- Request and response bodies stream through unchanged (`node:http`/`node:https`, not `FetchHttpClient` — that one buffers via `response.text()`); nothing is parsed, re-wrapped in the envelope, or logged.
+- `Authorization`, cookies, the request-id header (`REQUEST_ID_HEADER`) and `X-Forwarded-For` pass through; the client IP is appended to `X-Forwarded-For`, or set when it is missing.
+- The forwarder has its own timeout, `LEGACY_TIMEOUT_MS`, kept below the VIP's; it logs `legacy.forward.failed` with the method, path and status, never the body or headers.
+- **The legacy status passes straight through, untouched — including 4xx and 5xx.** This is the one deliberate departure from [Call another service](call-another-service.md): a forwarder is dumb transport, not a gateway, so an upstream 500 arrives at the client as 500, never mapped to a `Result` or turned into a 503.
+- A single list of forwarded prefixes lives in config (`LEGACY_FORWARD_PREFIXES`), so shrinking it as routes migrate is one deployment.
+
+Turn it on with `LEGACY_FORWARD_ENABLED=true`, `LEGACY_TARGET_URL` and at least one entry in `LEGACY_FORWARD_PREFIXES` ([Configuration § Legacy forwarding](../architecture/configuration.md#legacy-forwarding)). Because it pipes the raw request stream, it is wired with `app.use()` in `main.ts` — the composition root — immediately after `helmet()` and before the body parsers, and consequently before `RequestContextMiddleware`; it resolves its own request id from `REQUEST_ID_HEADER`, generating one when the caller sent none.
 
 ### Whatever option you take, behind a VIP check these
 

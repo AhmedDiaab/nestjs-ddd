@@ -53,6 +53,29 @@ stay easy to scan.
   `/metrics` keeps answering with just that worker's numbers. See [decision
   0012](docs/decisions/0012-cluster-primary-owns-forking.md) and
   `docs/architecture/operations.md` § Process model.
+- Legacy forwarding (`LEGACY_FORWARD_ENABLED`, default `false`) for teams migrating off a legacy
+  service with no proxy they control — option B, "new service in front"
+  (`docs/guides/migrate-a-legacy-service.md`). `src/infrastructure/legacy/legacy-forwarder.ts`
+  forwards only the configured `LEGACY_FORWARD_PREFIXES`; everything else still answers through
+  this app, and `FallbackController` keeps returning 404 for genuinely unknown paths. It streams
+  the request and response bodies through unchanged with `node:http`/`node:https` — `FetchHttpClient`
+  cannot be reused, it buffers the response via `response.text()` — and is wired with `app.use()`
+  in `src/main.ts` (the composition root; the ESLint layer fence keeps infrastructure out of
+  `src/interface`) immediately after `helmet()` and before the body parsers, so the raw request
+  stream is still intact when it arrives. It therefore also runs before `RequestContextMiddleware`
+  and resolves its own request id from `REQUEST_ID_HEADER` (`isSafeCorrelationId`), generating one
+  when the caller sent none. `Authorization`, cookies and the request-id header pass through
+  unchanged; hop-by-hop headers (`connection`, `keep-alive`, `transfer-encoding`, `upgrade`,
+  `proxy-authenticate`, `proxy-authorization`, `te`, `trailer`) are stripped on the way out, and
+  `X-Forwarded-For`/`X-Forwarded-Proto`/`X-Forwarded-Host` are set. **The legacy service's status
+  passes through untouched, including 4xx and 5xx** — the one deliberate departure from the
+  gateway rules in `docs/guides/call-another-service.md`: a forwarder is dumb transport, not a
+  gateway with an opinion about the upstream's contract. Only a transport failure on this hop
+  becomes 502 (connection refused, DNS, reset socket) or 504 (`LEGACY_TIMEOUT_MS` exceeded,
+  default `10000`, kept below a typical VIP's request timeout); both log
+  `legacy.forward.failed` with the method, path and status only, never a body or header. See
+  [decision 0013](docs/decisions/0013-legacy-forwarder-is-dumb-transport.md) and
+  `docs/architecture/configuration.md` § Legacy forwarding.
 
 ### Changed
 

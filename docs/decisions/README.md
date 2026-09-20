@@ -15,6 +15,7 @@ Short records of choices that shape the codebase. Read the relevant one before c
 | [0010](0010-error-origin.md)                           | Log the error's origin frame, not a stack trace; always on                          | Accepted |
 | [0011](0011-tls-optional-in-process.md)                | Optional in-process TLS, off by default                                             | Accepted |
 | [0012](0012-cluster-primary-owns-forking.md)           | Cluster primary owns forking; never builds a Nest application                       | Accepted |
+| [0013](0013-legacy-forwarder-is-dumb-transport.md)     | Legacy forwarder streams configured prefixes; status passes through untouched       | Accepted |
 | [0014](0014-nestjs-12-deferred.md)                     | Defer the `@nestjs/*` 12 upgrade (upstream type breakage, not our code)             | Accepted |
 | [0015](0015-shared-files-between-the-two-templates.md) | Files shared with `nestjs-ddd-lean`, diffed by hand; numbers mean the same decision | Accepted |
 
