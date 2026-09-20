@@ -21,6 +21,20 @@ Terms: [Glossary](glossary.md). Rules the template does enforce: [Architecture o
 
 **2026-09-19**: section 2's idempotency row is closed. A handler marked `@Idempotent()` now executes at most once per client-supplied `Idempotency-Key`: a retry with the same key and body replays the stored response instead of running the handler again, a reused key with a different body is rejected (422), and a concurrent retry while the first call is still running gets 409. The store is a port (`IdempotencyStorePort`) with two adapters selected by `IDEMPOTENCY_STORE` — an in-memory one for a single instance, and an Oracle one (a row per key, its unique index doubling as the claim lock) for a shared, restart-surviving store — because the in-memory adapter is useless for the exact scenario this feature exists for: a client retrying through a load balancer that might route the retry to a different instance. Full behaviour, configuration and the DDL: [Make an endpoint idempotent](guides/make-an-endpoint-idempotent.md). **This does not close the gap completely.** The interceptor claims the key, runs the handler, then completes it as three separate commits, not one transaction — a crash between the business write and the key being marked complete leaves the effect applied and the key still `in_progress`, and the eventual retry (once the in-progress TTL elapses) re-executes it. What shipped is at-most-once _responses_ under normal operation and best-effort at-most-once _effects_, not a transactional guarantee; the guide's stronger recipe (write the key row inside the use case's own `UnitOfWorkPort.run(...)`) is what closes that residual gap, per endpoint, when it matters enough to pay for it.
 
+**2026-09-20**: section 2's repository-hygiene row is closed. The repository now has a `LICENSE`
+(MIT, `package.json`'s `license` field matches, `private: true` untouched — the template is
+forked, not published to npm), a `CONTRIBUTING.md` written for someone who just forked it (setup,
+the `pnpm verify` gate and the coverage floor, commit conventions, how the layer rules are actually
+enforced, the release process, decision records), and a `.github/PULL_REQUEST_TEMPLATE.md` with a
+checklist drawn from this file's own definition of done. Commit linting and formatting now run
+**locally as well as in CI**: `pnpm install` installs husky hooks (`prepare`), `pre-commit` runs
+`lint-staged` (ESLint then Prettier on staged files only, so a commit stays fast), and `commit-msg`
+runs commitlint against `commitlint.config.mjs` — verified against every commit in this repository's
+history before landing, not just imagined. `--no-verify` still exists for emergencies. What this
+does not do: it doesn't add a CODEOWNERS file, branch protection, or a required-reviewers policy —
+those are GitHub repository settings, not something a commit can express, and are left for whoever
+owns the fork to decide.
+
 ## 1. Defects and risks in what exists
 
 Every row from the last review is closed by the pass described above, except pagination — which turned out not to be a defect at all. The dependency queue that used to be section 1's one open item is unstuck: eight of the nine Dependabot PRs (CI Actions to their latest majors, `@types/*`/`jest`/`@eslint/js` within range, and the `lint-and-format` major — the one that was red on `format:check`) are re-applied by hand on `chore/dependency-refresh`, and the ninth — `@nestjs/*` 11→12, the other red one — is investigated and deliberately deferred rather than forced.
@@ -45,7 +59,6 @@ Things a production service usually needs that this template does not provide at
 | 6   | **A one-command test database**  | `docker-compose.yml` does ship `gvenzl/oracle-free` with a healthcheck, so the container is not the hard part — the missing pieces are a schema seed and wiring `pnpm test:oracle` to it. Today the live suite needs a database you prepared by hand, so it runs rarely. | That rarity is how a real bug (errors unmapped inside a unit of work) survived         |
 | 7   | **Multi-tenancy**                | No tenant concept anywhere. The Oracle context user identifies the actor, not a tenant, and is not a data-scoping mechanism.                                                                                                                                             | Add deliberately if you need it; retrofitting is expensive                             |
 | 8   | **Deprecation path for the API** | URI versioning works, but there is no `Deprecation`/`Sunset` header helper and no written policy for retiring a version.                                                                                                                                                 |                                                                                        |
-| 9   | **Repository hygiene**           | No LICENSE, CONTRIBUTING, pull-request template, commit linting or pre-commit hook — in a repository whose whole purpose is to be forked. CI, Dependabot and a root `CHANGELOG.md` now exist, so the gap is narrower than it was.                                        | Conventions are enforced by reviewers and agents, not by tooling                       |
 
 ## 3. Opinions
 

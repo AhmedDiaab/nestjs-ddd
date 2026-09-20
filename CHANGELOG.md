@@ -11,6 +11,22 @@ stay easy to scan.
 
 ### Added
 
+- Repository hygiene: `LICENSE` (MIT), `CONTRIBUTING.md` and `.github/PULL_REQUEST_TEMPLATE.md`,
+  in a repository whose whole purpose is to be forked. `package.json` now carries `description`,
+  `author` and `repository` (`license` changed from `UNLICENSED` to `MIT`; `private: true` is
+  unchanged — the template is forked, not published to npm).
+- Commit linting and pre-commit formatting, enforced locally as well as in CI: `husky` installs
+  a `pre-commit` hook that runs `lint-staged` (ESLint `--fix` then Prettier on staged `*.ts`;
+  Prettier alone on staged `*.md`/`*.json`/`*.yml`/`*.yaml`) and a `commit-msg` hook that runs
+  `commitlint` (`commitlint.config.mjs`, extending `@commitlint/config-conventional`) against the
+  message. The config adds no rules of its own: config-conventional's defaults already forbid a
+  capitalised subject, and they pass every commit in this repository's history (verified, 0
+  errors). What the config does carry is a comment warning off the obvious `subject-case:
+lower-case` rule, which compares the whole subject against its lower-cased self and so rejects
+  the acronyms and decorators this repo's subjects legitimately embed — `HTTP`, `JWT`, `@Roles`.
+  `scope-enum` stays unset, since this repo invents a scope per feature. New devDependencies: `husky`, `lint-staged`, `@commitlint/cli`,
+  `@commitlint/config-conventional`. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full commit
+  convention and the release process; `--no-verify` still exists for emergencies.
 - `@Deprecated({ since, sunset, successor?, link?, note? })` (`src/interface/http/decorators/deprecated.decorator.ts`)
   marks a route as going away: `DeprecationInterceptor` sets `Deprecation` (RFC 9745, a Structured
   Fields Date `@<unix-seconds>` — there is no boolean form), `Sunset` (RFC 8594, an IMF-fixdate)

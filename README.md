@@ -82,3 +82,12 @@ docker compose --env-file .env.docker up --build
 | `pnpm test:service-scripts`                                | check the Windows service scripts in a PowerShell container (needs Docker)                                          |
 | `docker compose --env-file .env.docker up --build`         | API + Oracle locally ([Operations](docs/architecture/operations.md#docker))                                         |
 | `.\start-service.ps1` / `.\stop-service.ps1`               | Windows service via NSSM ([Operations](docs/architecture/operations.md#windows-service-nssm))                       |
+
+## Contributing
+
+Forking this template? See [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup, the `pnpm verify` gate,
+commit message conventions (enforced by commitlint) and how the release process works.
+
+## License
+
+[MIT](LICENSE) © 2026 Ahmed Diaab.
