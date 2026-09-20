@@ -109,6 +109,45 @@ describe('loadConfig', () => {
         expect(config.tls).toMatchObject({ enabled: false, minVersion: 'TLSv1.2' });
     });
 
+    it('loads cluster config from env, defaulting to disabled', () => {
+        // Arrange: only BASE_ENV is set
+
+        // Act
+        const config = loadConfig();
+
+        // Assert
+        expect(config.cluster).toMatchObject({
+            enabled: false,
+            workers: 0,
+            respawn: true,
+            isLeader: false,
+        });
+    });
+
+    it('parses cluster overrides from env', () => {
+        // Arrange
+        process.env = {
+            ...BASE_ENV,
+            CLUSTER_ENABLED: 'true',
+            CLUSTER_WORKERS: '4',
+            CLUSTER_RESPAWN: 'false',
+            CLUSTER_RESPAWN_MAX_PER_MINUTE: '5',
+            CLUSTER_METRICS_PORT: '9091',
+        };
+
+        // Act
+        const config = loadConfig();
+
+        // Assert
+        expect(config.cluster).toMatchObject({
+            enabled: true,
+            workers: 4,
+            respawn: false,
+            respawnMaxPerMinute: 5,
+            metricsPort: 9091,
+        });
+    });
+
     it('requires TLS_KEY_FILE and TLS_CERT_FILE when TLS_ENABLED=true', () => {
         // Arrange
         process.env = { ...BASE_ENV, TLS_ENABLED: 'true' };

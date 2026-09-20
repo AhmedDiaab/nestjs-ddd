@@ -15,6 +15,7 @@ import { collectDatabasePoolMetrics } from './database-pool.collector';
 import { MetricsRegistryToken } from './metrics-registry.token';
 import { NoopMetrics } from './noop-metrics';
 import { PrometheusMetrics } from './prometheus-metrics';
+import { registerForClusterAggregation } from './register-cluster-aggregation.util';
 
 /**
  * Metrics are off unless `METRICS_ENABLED`: an instance that nobody scrapes shouldn't pay for
@@ -33,6 +34,10 @@ import { PrometheusMetrics } from './prometheus-metrics';
                     config.get('metrics.defaultMetrics'),
                 );
                 collectDatabasePoolMetrics(metrics, db);
+                // In cluster mode this process is always a worker (the primary never builds a
+                // Nest application), so this opts every worker's registry into the primary's
+                // aggregated `/metrics` — see `register-cluster-aggregation.util.ts`.
+                if (config.get('cluster.enabled')) registerForClusterAggregation(metrics);
                 return metrics;
             },
             [ConfigPortToken, ConnectionProviderToken],

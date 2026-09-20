@@ -48,6 +48,44 @@ describe('JobScheduler', () => {
         expect(info).toHaveBeenCalledWith('scheduler.disabled', { jobs: 1 });
     });
 
+    it('registers no jobs on a non-leader worker in cluster mode', () => {
+        // Arrange
+        const config = configWith({
+            'scheduler.enabled': true,
+            'scheduler.timezone': 'UTC',
+            'cluster.enabled': true,
+            'cluster.isLeader': false,
+        });
+        const sut = new JobScheduler([job('a.job')], config, logger, metrics, registry);
+
+        // Act
+        sut.onApplicationBootstrap();
+
+        // Assert
+        expect(added.size).toBe(0);
+        expect(info).toHaveBeenCalledWith(
+            'scheduler.disabled',
+            expect.objectContaining({ jobs: 1, reason: 'not-leader' }),
+        );
+    });
+
+    it('registers jobs on the leader worker in cluster mode', () => {
+        // Arrange
+        const config = configWith({
+            'scheduler.enabled': true,
+            'scheduler.timezone': 'UTC',
+            'cluster.enabled': true,
+            'cluster.isLeader': true,
+        });
+        const sut = new JobScheduler([job('a.job')], config, logger, metrics, registry);
+
+        // Act
+        sut.onApplicationBootstrap();
+
+        // Assert
+        expect(added.size).toBe(1);
+    });
+
     it('starts every job in the configured timezone when enabled', () => {
         // Arrange
         const config = configWith({

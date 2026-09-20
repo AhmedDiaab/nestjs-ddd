@@ -90,6 +90,16 @@ export class PrometheusMetrics implements MetricsPort, MetricsScrapePort {
         return this.registry.contentType;
     }
 
+    /**
+     * The underlying `Registry`, exposed only for `AggregatorRegistry.setRegistries()` in cluster
+     * mode (`registerForClusterAggregation`, `register-cluster-aggregation.util.ts`) — metrics
+     * live on their own `Registry` instance rather than prom-client's global one, precisely so
+     * more than one `PrometheusMetrics` can exist (tests, in particular) without colliding.
+     */
+    get registryForAggregation(): Registry {
+        return this.registry;
+    }
+
     private counter(name: string, help: string, labelNames: string[]): void {
         this.counters.set(
             name,

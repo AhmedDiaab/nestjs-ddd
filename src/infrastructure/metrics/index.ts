@@ -9,3 +9,5 @@ export { MetricsRegistryToken } from './metrics-registry.token';
 export { NoopMetrics } from './noop-metrics';
 
 export { PrometheusMetrics } from './prometheus-metrics';
+
+export { registerForClusterAggregation } from './register-cluster-aggregation.util';
