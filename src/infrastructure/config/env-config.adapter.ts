@@ -1,7 +1,5 @@
-import { env } from 'node:process';
 import type { ConfigKey, ConfigPort, ConfigValue, ConfigValues } from '@application/ports';
 import { isRecord } from '@shared';
-import { config } from 'dotenv-flow';
 import { loadConfig, type AppConfig } from './load-config';
 
 export class EnvConfigAdapter implements ConfigPort {
@@ -11,15 +9,12 @@ export class EnvConfigAdapter implements ConfigPort {
      * `config` lets a caller that already validated one (e.g. `main.ts`'s early TLS read, which
      * must run before Nest — and therefore DI — exists) reuse it instead of parsing env twice.
      * Omitted, this validates from `process.env` itself, as every DI-constructed instance does.
+     * Reading `.env.<NODE_ENV>` belongs to `loadConfig()`, so both callers get it in the right
+     * order — this adapter used to own it, which left the earlier caller parsing a bare
+     * environment.
      */
     constructor(config?: AppConfig) {
-        this.loadEnv();
         this.config = config ?? loadConfig();
-    }
-
-    private loadEnv(): void {
-        if (['test', 'testing'].includes(env.NODE_ENV as string)) return;
-        config({ silent: true });
     }
 
     isDevelopment(): boolean {

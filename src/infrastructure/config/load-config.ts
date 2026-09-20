@@ -12,6 +12,7 @@ import {
     shutdownSchema,
     tlsSchema,
 } from '@infrastructure/config/schemas';
+import { config as dotenvFlow } from 'dotenv-flow';
 import { z } from 'zod';
 import { envBool, envList, envString } from './env.util';
 import { InvalidConfigError } from './invalid-config.error';
@@ -146,8 +147,22 @@ function hydrate() {
 
 export type AppConfig = z.infer<typeof rootSchema>;
 
+/**
+ * Reads `.env.<NODE_ENV>` into `process.env` before anything validates it. It lives here, not in
+ * an adapter, because `loadConfig()` is called from two places — `EnvConfigAdapter` under DI, and
+ * `main.ts` before Nest exists, to build `httpsOptions` — and whichever runs first must see the
+ * file. Skipped under test, where specs set `process.env` themselves and must not pick up a
+ * developer's local file. Existing variables always win, so a real environment variable beats the
+ * file, which is what container and service deployments rely on.
+ */
+function loadEnvFiles(): void {
+    if (['test', 'testing'].includes(env.NODE_ENV as string)) return;
+    dotenvFlow({ silent: true });
+}
+
 /** Validates env into a typed config. Values are never included in errors (they may be secrets). */
 export function loadConfig(): AppConfig {
+    loadEnvFiles();
     const parsed = rootSchema.safeParse(hydrate());
     if (!parsed.success) {
         throw new InvalidConfigError(
