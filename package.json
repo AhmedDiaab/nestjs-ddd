@@ -1,10 +1,14 @@
 {
     "name": "nestjs-ddd",
     "version": "1.0.0",
-    "description": "",
-    "author": "",
+    "description": "NestJS 11 starter template for layered / DDD HTTP services: consistent response envelope, structured logging, fail-fast config, multi-source database layer (Oracle implemented), JWT verification, enforced layer boundaries, and an agent-ready setup.",
+    "author": "Ahmed Diaab",
     "private": true,
-    "license": "UNLICENSED",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/AhmedDiaab/nestjs-ddd.git"
+    },
     "engines": {
         "node": ">=22.18.0",
         "pnpm": ">=10.15.0"
