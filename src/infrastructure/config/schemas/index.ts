@@ -1,5 +1,7 @@
 export { type AppSectionConfig, appSchema } from './app.schema';
 
+export { type ClusterConfig, clusterSchema } from './cluster.schema';
+
 export {
     type DatabaseConfig,
     type DatabaseHealth,

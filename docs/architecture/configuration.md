@@ -79,6 +79,26 @@ Optional in-process TLS termination — off by default, since a load balancer/VI
 
 A bad or missing path fails at boot: `loadTlsOptions` (`src/infrastructure/tls/load-tls-options.ts`) reads the files once, before Nest starts, and throws `InvalidConfigError` naming the path, never the file's contents.
 
+### Cluster
+
+Multi-core scaling on a single box via Node's built-in `cluster` module — no external process manager, off by default ([Operations → Process model](operations.md#process-model)).
+
+| Variable                         | Default | Notes                                                                                                                                                                                  |
+| -------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CLUSTER_ENABLED`                | `false` | run a primary + N worker processes instead of one                                                                                                                                      |
+| `CLUSTER_WORKERS`                | `0`     | worker process count; `0` = one per CPU core (`resolveWorkerCount`)                                                                                                                    |
+| `CLUSTER_RESPAWN`                | `true`  | fork a replacement when a worker exits unexpectedly                                                                                                                                    |
+| `CLUSTER_RESPAWN_MAX_PER_MINUTE` | `10`    | ceiling on respawns per rolling minute, so a crash loop can't fork forever                                                                                                             |
+| `CLUSTER_METRICS_PORT`           | –       | primary serves aggregated `/metrics` here when set and `METRICS_ENABLED=true`; unset = no aggregated endpoint, a worker's own `/metrics` still answers with just that worker's numbers |
+
+With more than one worker, three boot-time rails run in the primary before any worker is forked (`runClusterBootRails`):
+
+- `IDEMPOTENCY_STORE=memory` **fails at boot** — the same posture as any other invalid configuration ([Idempotency](#idempotency) above): per-worker claim state would make `@Idempotent()` silently wrong, not merely absent.
+- `THROTTLE_STORAGE=memory` logs a warning naming the effective limit: each worker enforces its own counter, so the real ceiling across the cluster is `THROTTLE_LIMIT × workers`, not `THROTTLE_LIMIT`.
+- Database pool capacity is logged for every configured source: `poolMax × workers` sessions, the same number [Migrate a legacy service](../guides/migrate-a-legacy-service.md) already warns about for several separate instances.
+
+`SCHEDULER_ENABLED=true` only registers cron jobs on the elected leader worker (`JobScheduler`) — no extra configuration needed. See [decision 0012](../decisions/0012-cluster-primary-owns-forking.md).
+
 ### Idempotency
 
 Backs `@Idempotent()` ([guide](../guides/make-an-endpoint-idempotent.md)).
