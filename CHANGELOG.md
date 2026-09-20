@@ -32,12 +32,36 @@ stay easy to scan.
   development certificate can't be committed by accident. See [decision
   0011](docs/decisions/0011-tls-optional-in-process.md) and `docs/architecture/operations.md` §
   TLS.
+- Cluster mode (`CLUSTER_ENABLED`, default `false`): multi-core scaling on a single box via Node's
+  built-in `cluster` module — no external process manager. `src/infrastructure/cluster/` forks
+  `CLUSTER_WORKERS` workers (0 = one per CPU core), respawns one that exits unexpectedly
+  (rate-capped by `CLUSTER_RESPAWN_MAX_PER_MINUTE`, off via `CLUSTER_RESPAWN=false`), elects one
+  worker as the scheduler leader, and — on `SIGTERM`/`SIGINT` — forwards the signal to every
+  worker explicitly (`worker.process.kill(signal)`, not relying on the OS, since Windows does not
+  propagate it reliably) before a bounded wait and `SIGKILL` for stragglers. The primary never
+  builds a Nest application: no database pools, no HTTP server, no Swagger. Boot-time safety
+  rails run before any worker is forked: `IDEMPOTENCY_STORE=memory` with more than one worker now
+  fails at boot (`InvalidConfigError`, same posture as any other invalid config);
+  `THROTTLE_STORAGE=memory` logs a warning naming the effective limit
+  (`THROTTLE_LIMIT × workers`); database pool capacity (`poolMax × workers`) is logged per source.
+  Aggregated `/metrics` for the whole cluster is served by the primary on `CLUSTER_METRICS_PORT`
+  (`prom-client`'s `AggregatorRegistry` only aggregates from the primary) — a worker's own
+  `/metrics` keeps answering with just that worker's numbers. See [decision
+  0012](docs/decisions/0012-cluster-primary-owns-forking.md) and
+  `docs/architecture/operations.md` § Process model.
 
 ### Changed
 
 - `EnvConfigAdapter`'s constructor now optionally accepts an already-loaded `AppConfig`, so
   `main.ts`'s early TLS config read (needed before Nest — and DI — exists) reuses it instead of
-  parsing `process.env` a second time to build the `ConfigPort` that `loadTlsOptions` needs.
+  parsing `process.env` a second time to build the `ConfigPort` that `loadTlsOptions` needs; the
+  cluster primary reuses the same read again, for its own config and logger.
+- `JobScheduler.onApplicationBootstrap()` now also skips registering jobs when clustered and this
+  worker is not the elected leader, so `SCHEDULER_ENABLED=true` clusters correctly with no extra
+  configuration — its class doc comment is updated to match.
+- `PrometheusMetrics` exposes its underlying `Registry` (`registryForAggregation`) and
+  `MetricsModule` opts a worker's registry into `AggregatorRegistry.clusterMetrics()` when
+  clustered (`registerForClusterAggregation`), so the primary's aggregated `/metrics` includes it.
 
 - `AppError`/`DomainError` base constructors call `Error.captureStackTrace(this, new.target)`
   (V8-only, guarded), so an error's own creation site is captured with the constructor frames
