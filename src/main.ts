@@ -4,6 +4,7 @@ import type { ConfigPort, LoggerPort, ShutdownPort } from '@application/ports';
 import { ConfigPortToken, LoggerPortToken, ShutdownPortToken } from '@application/ports';
 import { releaseWorkerChannel, startPrimary } from '@infrastructure/cluster';
 import { EnvConfigAdapter, InvalidConfigError, loadConfig } from '@infrastructure/config';
+import { LegacyForwarder } from '@infrastructure/legacy';
 import { runGracefulShutdown } from '@infrastructure/lifecycle';
 import { PinoProcessLogger } from '@infrastructure/logging';
 import { loadTlsOptions } from '@infrastructure/tls';
@@ -58,6 +59,26 @@ async function bootstrap() {
     if (config.get('http.trustProxy')) app.set('trust proxy', 1);
 
     app.use(helmet());
+
+    // Legacy forwarding (docs/guides/migrate-a-legacy-service.md § option B, decision 0013) runs
+    // immediately after helmet() and before EVERYTHING else, including cookieParser() and the
+    // body parsers below: it pipes the raw request/response streams through unchanged, and a
+    // parsed body would already be gone from the stream by the time it got here. It also runs
+    // before RequestContextMiddleware (a Nest middleware, wired later in the pipeline once
+    // routing starts), so it resolves its own request id rather than reading one from the
+    // request context.
+    if (config.get('legacy.forwardEnabled')) {
+        const forwarder = new LegacyForwarder({
+            targetUrl: config.get('legacy.targetUrl')!,
+            forwardPrefixes: config.get('legacy.forwardPrefixes'),
+            timeoutMs: config.get('legacy.timeoutMs'),
+            preserveHostHeader: config.get('legacy.preserveHostHeader'),
+            requestIdHeader: config.get('logging.requestIdHeader'),
+            logger: app.get<LoggerPort>(LoggerPortToken),
+        });
+        app.use(forwarder.middleware());
+    }
+
     app.use(cookieParser());
 
     // server timeouts
