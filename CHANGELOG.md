@@ -68,6 +68,15 @@ stay easy to scan.
   string or a list of strings — anything else falls back to the status name instead of being
   stringified into `"[object Object]"`.
 
+### Fixed
+
+- Reading `.env.<NODE_ENV>` moved from `EnvConfigAdapter`'s constructor into `loadConfig()`. The
+  TLS work added a `loadConfig()` call in `main.ts`, before Nest exists, so the earliest parse saw
+  a bare environment and any deployment keeping its secrets in the file — `pnpm start:dev` and the
+  Windows service setup both do — failed to boot with an invalid-configuration error for the
+  variables that live in that file. Real environment variables still win over the file. Found
+  while syncing `nestjs-ddd-lean`, which had inherited the same ordering.
+
 ### Removed
 
 - The unused `source-map-support` devDependency — `--enable-source-maps` (a native `node` flag,
