@@ -1,4 +1,9 @@
 import { InvalidConfigError, loadConfig } from '@infrastructure/config';
+import { config as dotenvFlow } from 'dotenv-flow';
+
+jest.mock('dotenv-flow', () => ({ config: jest.fn() }));
+
+const readEnvFiles = dotenvFlow as jest.MockedFunction<typeof dotenvFlow>;
 
 const BASE_ENV = {
     NODE_ENV: 'test',
@@ -10,10 +15,35 @@ describe('loadConfig', () => {
 
     beforeEach(() => {
         process.env = { ...BASE_ENV };
+        readEnvFiles.mockClear();
     });
 
     afterAll(() => {
         process.env = original;
+    });
+
+    // `main.ts` calls loadConfig() before Nest exists, to build httpsOptions. Reading the env
+    // file has to happen here rather than in EnvConfigAdapter, or that earlier caller parses a
+    // bare environment and a deployment whose secrets live in .env.<NODE_ENV> dies at boot.
+    it('reads the env file before validating, outside test environments', () => {
+        // Arrange
+        process.env = { ...BASE_ENV, NODE_ENV: 'production' };
+
+        // Act
+        loadConfig();
+
+        // Assert
+        expect(readEnvFiles).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the env file alone under test, where specs set process.env themselves', () => {
+        // Arrange: BASE_ENV already sets NODE_ENV to test
+
+        // Act
+        loadConfig();
+
+        // Assert
+        expect(readEnvFiles).not.toHaveBeenCalled();
     });
 
     it('applies schema defaults when env values are unset', () => {
