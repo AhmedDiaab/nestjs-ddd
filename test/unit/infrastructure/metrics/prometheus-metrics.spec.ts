@@ -98,4 +98,16 @@ describe('PrometheusMetrics', () => {
         // Assert
         expect(body).toContain('process_cpu_user_seconds_total');
     });
+
+    it('exposes its underlying registry for cluster aggregation', async () => {
+        // Arrange
+        const sut = new PrometheusMetrics('orders-api', false);
+        sut.increment(Metrics.httpServerRequests, { method: 'GET', route: '/v1', status: 200 });
+
+        // Act
+        const body = await sut.registryForAggregation.metrics();
+
+        // Assert
+        expect(body).toContain('http_server_requests_total');
+    });
 });
