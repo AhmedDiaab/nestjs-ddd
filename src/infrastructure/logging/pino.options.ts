@@ -102,11 +102,21 @@ function errorSerializer(config: ConfigPort) {
     };
 }
 
-export const generatePinoOptions = (config: ConfigPort): Params => {
-    const requestIdHeader = config.get('logging.requestIdHeader');
-    const targets = [fileRotationTarget(config), consoleTarget(config)].filter(
+/**
+ * Console + optional file-rotation transport targets. Shared by the in-app `pinoHttp` options
+ * below and by `PinoProcessLogger` (`pino-process-logger.ts`), a plain-pino logger for code that
+ * runs before Nest exists — today, only the cluster primary — so its logs land in the same place
+ * (console, and the same rotated file when `LOGGING_TO_FILE=true`) as its workers'.
+ */
+export function createTransportTargets(config: ConfigPort): TransportTargetOptions[] {
+    return [fileRotationTarget(config), consoleTarget(config)].filter(
         (target): target is TransportTargetOptions => !!target,
     );
+}
+
+export const generatePinoOptions = (config: ConfigPort): Params => {
+    const requestIdHeader = config.get('logging.requestIdHeader');
+    const targets = createTransportTargets(config);
     const serializeError = errorSerializer(config);
 
     return {

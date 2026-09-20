@@ -1,8 +1,11 @@
+import cluster from 'node:cluster';
 import type { Server as HttpServer } from 'node:http';
 import type { ConfigPort, LoggerPort, ShutdownPort } from '@application/ports';
 import { ConfigPortToken, LoggerPortToken, ShutdownPortToken } from '@application/ports';
+import { startPrimary } from '@infrastructure/cluster';
 import { EnvConfigAdapter, InvalidConfigError, loadConfig } from '@infrastructure/config';
 import { runGracefulShutdown } from '@infrastructure/lifecycle';
+import { PinoProcessLogger } from '@infrastructure/logging';
 import { loadTlsOptions } from '@infrastructure/tls';
 import { setupSwagger } from '@interface/http/swagger';
 import { JobScheduler } from '@interface/scheduler';
@@ -15,12 +18,25 @@ import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-    // `httpsOptions` must be known before `NestFactory.create` builds the HTTP server, so this
-    // one read happens before DI exists. `loadConfig()` is pure (env → Zod, no side effects) and
-    // is the same function `ConfigModule`'s `EnvConfigAdapter` calls; every other read below goes
-    // through the injected `ConfigPort`. (Cluster mode will reuse this same early read.)
+    // `httpsOptions` (and, in cluster mode, the primary's config and logger) must be known
+    // before Nest — and DI — exist, so this one read happens first. `loadConfig()` is pure
+    // (env → Zod, no side effects) and is the same function `ConfigModule`'s `EnvConfigAdapter`
+    // calls; every other read below goes through the injected `ConfigPort`.
     const bootstrapConfig = loadConfig();
-    const httpsOptions = loadTlsOptions(new EnvConfigAdapter(bootstrapConfig));
+    const configPort = new EnvConfigAdapter(bootstrapConfig);
+    const httpsOptions = loadTlsOptions(configPort);
+
+    // The primary never builds a Nest application: no database pools, no HTTP server, no
+    // Swagger — see decision 0012. Workers (`cluster.isWorker`) and the single-process default
+    // (`cluster.enabled` false) both fall through to the same bootstrap as always.
+    if (bootstrapConfig.cluster.enabled && cluster.isPrimary) {
+        startPrimary({
+            clusterApi: cluster,
+            config: bootstrapConfig,
+            logger: new PinoProcessLogger(configPort),
+        });
+        return;
+    }
 
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
         ...(httpsOptions ? { httpsOptions } : {}),
