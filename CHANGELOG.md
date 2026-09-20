@@ -19,12 +19,12 @@ stay easy to scan.
   a `pre-commit` hook that runs `lint-staged` (ESLint `--fix` then Prettier on staged `*.ts`;
   Prettier alone on staged `*.md`/`*.json`/`*.yml`/`*.yaml`) and a `commit-msg` hook that runs
   `commitlint` (`commitlint.config.mjs`, extending `@commitlint/config-conventional`) against the
-  message. `subject-case` is narrowed from config-conventional's default four-way check (no
-  sentence-case, start-case, pascal-case or upper-case) down to just "no sentence-case" — this
-  repo's subjects legitimately embed acronyms (`HTTP`, `JWT`, `TLS`) and decorators (`@Roles`),
-  which the stricter checks reject; `scope-enum` is deliberately left open, since this repo invents
-  a scope per feature. Verified clean (0 errors) against every commit in this repository's history
-  before landing. New devDependencies: `husky`, `lint-staged`, `@commitlint/cli`,
+  message. The config adds no rules of its own: config-conventional's defaults already forbid a
+  capitalised subject, and they pass every commit in this repository's history (verified, 0
+  errors). What the config does carry is a comment warning off the obvious `subject-case:
+lower-case` rule, which compares the whole subject against its lower-cased self and so rejects
+  the acronyms and decorators this repo's subjects legitimately embed — `HTTP`, `JWT`, `@Roles`.
+  `scope-enum` stays unset, since this repo invents a scope per feature. New devDependencies: `husky`, `lint-staged`, `@commitlint/cli`,
   `@commitlint/config-conventional`. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full commit
   convention and the release process; `--no-verify` still exists for emergencies.
 - `@Deprecated({ since, sunset, successor?, link?, note? })` (`src/interface/http/decorators/deprecated.decorator.ts`)

@@ -1,14 +1,13 @@
+/**
+ * Conventional Commits, as `AGENTS.md` and `CONTRIBUTING.md` already require.
+ *
+ * No `subject-case` override on purpose. The obvious one, `[2, 'always', 'lower-case']`, compares
+ * the whole subject against its lower-cased self, so it rejects every subject carrying an acronym
+ * or identifier — `feat(http): add an outbound HTTP client`, `feat(auth): verify the JWT on every
+ * route` — which is most of this repository's history. The inherited default already forbids the
+ * cases that actually matter (sentence-case, start-case, pascal-case, upper-case), so a subject
+ * still cannot start with a capital; it was verified against every commit in this repository.
+ */
 export default {
     extends: ['@commitlint/config-conventional'],
-    rules: {
-        // config-conventional forbids sentence-case, start-case, pascal-case AND upper-case
-        // subjects. This repo's subjects legitimately contain embedded acronyms (HTTP, JWT,
-        // TLS, CSRF) and decorators (@Roles), so a strict "the whole subject must be
-        // lower-case" check (commitlint's `lower-case` target does `subject.toLowerCase() ===
-        // subject`) rejects real, correctly-styled commits. What this repo actually enforces is
-        // narrower: the subject must not start with a capital letter (no sentence-case). Verified
-        // against `git log --oneline -100` before landing this — see CONTRIBUTING.md.
-        'subject-case': [2, 'never', ['sentence-case']],
-        // scopes are invented per feature (see `git log --oneline`), so no enum to enforce
-    },
 };
