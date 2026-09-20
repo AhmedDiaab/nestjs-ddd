@@ -89,6 +89,14 @@ failure modes either impossible or loud:
   still alive and exits. Windows in particular does not reliably deliver a console signal to child
   processes, so "the OS will forward it" is not a safe assumption on the one platform this feature
   exists for.
+- **A worker closes its IPC channel once its drain finishes**, so it exits voluntarily instead of
+  waiting to be killed. The channel is an active handle: a worker that has closed its server and
+  its pools still has a live event loop while it stays connected. Measured before the fix, a
+  clustered shutdown took the entire bounded wait and ended in `SIGKILL` every single time — at
+  default timings that is 27 seconds per restart, with `cluster.drain.timeout` logged at `warn` on
+  every clean shutdown, which would train anyone reading the logs to ignore the one line that
+  means a worker is genuinely stuck. Afterwards the same shutdown finished in about half the
+  budget with no timeout logged.
 
 ## Consequences
 

@@ -38,7 +38,11 @@ stay easy to scan.
   (rate-capped by `CLUSTER_RESPAWN_MAX_PER_MINUTE`, off via `CLUSTER_RESPAWN=false`), elects one
   worker as the scheduler leader, and — on `SIGTERM`/`SIGINT` — forwards the signal to every
   worker explicitly (`worker.process.kill(signal)`, not relying on the OS, since Windows does not
-  propagate it reliably) before a bounded wait and `SIGKILL` for stragglers. The primary never
+  propagate it reliably) before a bounded wait and `SIGKILL` for stragglers. A worker closes its
+  IPC channel to the primary once its own drain finishes, so it exits voluntarily rather than
+  waiting to be killed — the channel is an active handle that would otherwise keep a
+  finished worker's event loop alive for the whole budget (27 seconds at default timings) and log
+  `cluster.drain.timeout` on every clean restart. The primary never
   builds a Nest application: no database pools, no HTTP server, no Swagger. Boot-time safety
   rails run before any worker is forked: `IDEMPOTENCY_STORE=memory` with more than one worker now
   fails at boot (`InvalidConfigError`, same posture as any other invalid config);

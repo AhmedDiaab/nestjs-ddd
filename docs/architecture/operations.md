@@ -200,6 +200,8 @@ StopTimeoutMs ≥ SHUTDOWN_DRAIN_DELAY_MS + SHUTDOWN_FORCE_AFTER_MS + SHUTDOWN_J
 
 `start-service.ps1`'s `$StopTimeoutMs` is unchanged by cluster mode — it already needs headroom above the full drain sequence, and a worker's own drain sequence is exactly what it was in a single process. The primary adds only the time it takes to notice every worker has exited, bounded by that same total plus a small fixed slack, before it `SIGKILL`s stragglers and exits itself. Set it generously either way.
 
+A worker exits on its own as soon as its drain finishes: once `app.close()` returns, it closes its IPC channel to the primary, because that channel is an active handle that would otherwise keep the event loop alive with nothing left to do. Without that step every clustered shutdown would sit until the bounded wait expired and then be force-killed — a clean restart would be indistinguishable from a stuck one, and `cluster.drain.timeout` would fire every time. It is logged at `warn` precisely because it should be rare: seeing it means a worker really is stuck, not that shutdown is working normally.
+
 ## Graceful shutdown
 
 On `SIGTERM`/`SIGINT` (Ctrl+C) the process shuts down in the order a load balancer expects. This describes a single worker's sequence; in [cluster mode](#process-model) the primary forwards the signal to every worker and adds one more hop before it exits itself.

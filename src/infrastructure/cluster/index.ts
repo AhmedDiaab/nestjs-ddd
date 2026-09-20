@@ -19,4 +19,6 @@ export {
     type StartPrimaryDeps,
 } from './cluster-primary';
 
+export { releaseWorkerChannel, type DisconnectableProcess } from './release-worker-channel.util';
+
 export { resolveWorkerCount } from './resolve-worker-count.util';

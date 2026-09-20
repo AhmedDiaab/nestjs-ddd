@@ -2,7 +2,7 @@ import cluster from 'node:cluster';
 import type { Server as HttpServer } from 'node:http';
 import type { ConfigPort, LoggerPort, ShutdownPort } from '@application/ports';
 import { ConfigPortToken, LoggerPortToken, ShutdownPortToken } from '@application/ports';
-import { startPrimary } from '@infrastructure/cluster';
+import { releaseWorkerChannel, startPrimary } from '@infrastructure/cluster';
 import { EnvConfigAdapter, InvalidConfigError, loadConfig } from '@infrastructure/config';
 import { runGracefulShutdown } from '@infrastructure/lifecycle';
 import { PinoProcessLogger } from '@infrastructure/logging';
@@ -124,6 +124,12 @@ function installShutdownHandlers(
                 forceAfterMs: config.get('shutdown.forceAfterMs'),
                 drainJobs: () => scheduler.stop(config.get('shutdown.jobDrainMs')),
                 closeApp: () => app.close(),
+                // A worker's IPC channel keeps its event loop alive after everything else has
+                // closed; without this the primary force-kills it at the end of the bounded
+                // wait, so every clustered restart would take the full budget. No-op outside
+                // a cluster.
+            }).then((ran) => {
+                if (ran) releaseWorkerChannel();
             });
         });
     }
