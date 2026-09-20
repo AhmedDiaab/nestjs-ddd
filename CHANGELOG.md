@@ -11,6 +11,23 @@ stay easy to scan.
 
 ### Added
 
+- `@Deprecated({ since, sunset, successor?, link?, note? })` (`src/interface/http/decorators/deprecated.decorator.ts`)
+  marks a route as going away: `DeprecationInterceptor` sets `Deprecation` (RFC 9745, a Structured
+  Fields Date `@<unix-seconds>` — there is no boolean form), `Sunset` (RFC 8594, an IMF-fixdate)
+  and, when `successor`/`link` are given, a joined `Link` header (`rel="successor-version"` per
+  RFC 5829, `rel="deprecation"` per RFC 9745) on every response, and Swagger shows the operation
+  as `deprecated: true`. `since` and `sunset` are both required and validated with Zod inside the
+  decorator factory (`src/interface/http/common/deprecation-headers.util.ts`), so a malformed date
+  or a `sunset` earlier than `since` throws at module load — effectively at boot — rather than on
+  the route's first request; the formatted headers, not the raw options, are stored in metadata,
+  so the interceptor does no per-request work. `DeprecationInterceptor` is registered between
+  `MetricsInterceptor` and `ZodHttpInterceptor` so the headers survive a later rejection (a 400
+  from Zod, a 500 from the handler). The headers are advisory only — a route past its `sunset`
+  still answers normally. See [decision
+  0009](docs/decisions/0009-deprecation-dates-live-on-the-route-not-config.md) and
+  [`docs/guides/make-an-endpoint-deprecated.md`](docs/guides/make-an-endpoint-deprecated.md) for
+  the retirement policy and the honest limitations (guard-rejected requests carry no headers; the
+  headers aren't CORS-exposed today).
 - Error logs now carry `origin` (and `causeOrigin`, when the error's `cause` chain has a
   different app frame) — the one line of OUR code that created the error, e.g.
   `src/infrastructure/database/dao/oracle-tickets.dao.ts:80 (OracleTicketsDao.findById)` —

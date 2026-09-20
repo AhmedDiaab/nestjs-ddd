@@ -71,6 +71,12 @@ Keep HTTP schemas structural (types, formats, enums, ranges). Business rules (tr
 
 The key is fingerprinted against the exact request bytes (SHA-256 of method + path + the raw body), backed by `IdempotencyStorePort` (an in-memory adapter for a single instance, an Oracle adapter for a shared/durable store). Full behaviour table, configuration and the effect-atomicity limitation: [Make an endpoint idempotent](../guides/make-an-endpoint-idempotent.md).
 
+## Deprecation
+
+`@Deprecated({ since, sunset, successor?, link?, note? })` (`interface/http/decorators/deprecated.decorator.ts`) + `DeprecationInterceptor` mark a route as going away: every response carries `Deprecation` (RFC 9745, a Structured Fields Date `@<unix-seconds>`, no boolean form), `Sunset` (RFC 8594, an IMF-fixdate) and, when `successor`/`link` are given, a joined `Link` header (`rel="successor-version"` per RFC 5829, `rel="deprecation"` per RFC 9745). Swagger shows the operation as `deprecated: true`. Opt-in, like `@Public()`/`@Idempotent()` — nothing changes until the route carries the decorator.
+
+`since`/`sunset` are both required (the header has no valueless form, and a deprecation with no retirement date isn't a policy) and validated with Zod **inside the decorator factory**, so a bad date throws at module load — effectively at boot — rather than on the route's first request. `DeprecationInterceptor` is registered **between `MetricsInterceptor` and `ZodHttpInterceptor`**, as early as possible: it only sets headers before `next.handle()` and never touches the return value, so the headers survive a later rejection (a 400 from Zod, a 500 from the handler) instead of being skipped because something downstream failed first. The headers are advisory — a route past its `sunset` date still answers normally; nothing here enforces a cutoff. Full options, the client-visible header block and the retirement policy: [Make an endpoint deprecated](../guides/make-an-endpoint-deprecated.md); rationale: [decision 0009](../decisions/0009-deprecation-dates-live-on-the-route-not-config.md).
+
 ## Authentication
 
 - `JwtStrategy` (`src/infrastructure/auth/strategies/jwt.strategy.ts`) reads the token from the cookie named by `JWT_COOKIE_NAME` (default `jwt`), falling back to `Authorization: Bearer`. It verifies the secret, `JWT_ALGORITHMS`, `JWT_ISSUER` and `JWT_AUDIENCE`.
@@ -133,3 +139,4 @@ URI versioning with default `1`: routes are `/v1/...`. Health routes are `VERSIO
 - [Add a controller](../guides/add-controller.md)
 - [Add an error](../guides/add-error.md)
 - [Make an endpoint idempotent](../guides/make-an-endpoint-idempotent.md)
+- [Make an endpoint deprecated](../guides/make-an-endpoint-deprecated.md)

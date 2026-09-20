@@ -14,6 +14,7 @@ import { FallbackController } from './http/common/fallback/fallback.controller';
 import { ResponseFormatterInterceptor } from './http/common/interceptors/response-formatter.interceptor';
 import { ErrorPresenter } from './http/error-presenter';
 import { GlobalExceptionFilter } from './http/global-exception.filter';
+import { DeprecationInterceptor } from './http/interceptors/deprecation.interceptor';
 import { IdempotencyInterceptor } from './http/interceptors/idempotency.interceptor';
 import { MetricsInterceptor } from './http/interceptors/metrics.interceptor';
 import { ZodHttpInterceptor } from './http/interceptors/zod-http.interceptor';
@@ -39,6 +40,9 @@ import { RequestContextMiddleware } from './http/middleware';
         ProviderFactory.class(APP_GUARD, RolesGuard),
         // first interceptor: its timer wraps everything the others do
         ProviderFactory.class(APP_INTERCEPTOR, MetricsInterceptor),
+        // only sets headers before next.handle(): running this early means they survive a later
+        // rejection (a 400 from Zod, a 500 from the handler), not just a handler that succeeds
+        ProviderFactory.class(APP_INTERCEPTOR, DeprecationInterceptor),
         ProviderFactory.class(APP_INTERCEPTOR, ZodHttpInterceptor),
         ProviderFactory.class(APP_INTERCEPTOR, ResponseFormatterInterceptor),
         // after the formatter, so it is the innermost interceptor: it stores/replays the
