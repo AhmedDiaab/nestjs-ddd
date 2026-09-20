@@ -1,5 +1,9 @@
 import type { IncomingHttpHeaders } from 'node:http';
-import { buildForwardHeaders, type ForwardHeadersInput } from '@infrastructure/legacy';
+import {
+    buildForwardHeaders,
+    stripHopByHopHeaders,
+    type ForwardHeadersInput,
+} from '@infrastructure/legacy';
 
 function baseInput(overrides: Partial<ForwardHeadersInput> = {}): ForwardHeadersInput {
     return {
@@ -127,5 +131,48 @@ describe('buildForwardHeaders', () => {
 
         // Assert
         expect(result.host).toBe('app.example.com');
+    });
+});
+
+describe('stripHopByHopHeaders', () => {
+    it('drops headers that describe this hop rather than the client connection', () => {
+        // Arrange
+        const upstream = {
+            connection: 'keep-alive',
+            'keep-alive': 'timeout=5',
+            'transfer-encoding': 'chunked',
+            upgrade: 'h2c',
+            'proxy-authenticate': 'Basic',
+            te: 'trailers',
+            trailer: 'Expires',
+        };
+
+        // Act
+        const result = stripHopByHopHeaders(upstream);
+
+        // Assert
+        expect(result).toEqual({});
+    });
+
+    it('keeps the headers the client actually needs', () => {
+        // Arrange
+        const upstream = {
+            'content-type': 'application/json',
+            'content-length': '12',
+            'set-cookie': ['session=abc'],
+            etag: 'W/"1"',
+            connection: 'close',
+        };
+
+        // Act
+        const result = stripHopByHopHeaders(upstream);
+
+        // Assert
+        expect(result).toEqual({
+            'content-type': 'application/json',
+            'content-length': '12',
+            'set-cookie': ['session=abc'],
+            etag: 'W/"1"',
+        });
     });
 });

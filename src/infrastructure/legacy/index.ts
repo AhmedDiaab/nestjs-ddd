@@ -1,4 +1,8 @@
-export { type ForwardHeadersInput, buildForwardHeaders } from './forward-headers.util';
+export {
+    type ForwardHeadersInput,
+    buildForwardHeaders,
+    stripHopByHopHeaders,
+} from './forward-headers.util';
 
 export { LegacyForwarder, type LegacyForwarderOptions } from './legacy-forwarder';
 

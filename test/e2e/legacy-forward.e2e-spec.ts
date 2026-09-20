@@ -41,7 +41,13 @@ describe('Legacy forwarding (e2e)', () => {
             if (path === '/v1/legacy/echo') {
                 capturedHeaders = req.headers;
                 req.resume();
-                res.writeHead(201, { 'x-upstream': 'legacy-value', 'content-type': 'text/plain' });
+                res.writeHead(201, {
+                    'x-upstream': 'legacy-value',
+                    'content-type': 'text/plain',
+                    // hop-by-hop: describes the forwarder's connection, not the client's
+                    connection: 'keep-alive',
+                    'keep-alive': 'timeout=5',
+                });
                 res.end('hello from legacy');
                 return;
             }
@@ -119,6 +125,16 @@ describe('Legacy forwarding (e2e)', () => {
         expect(res.status).toBe(201);
         expect(res.headers['x-upstream']).toBe('legacy-value');
         expect(res.text).toBe('hello from legacy');
+    });
+
+    it('does not repeat the upstream hop-by-hop headers to the client', async () => {
+        // Arrange: the upstream answers /echo with connection and keep-alive headers
+
+        // Act
+        const res = await request(app.getHttpServer()).get('/v1/legacy/echo');
+
+        // Assert
+        expect(res.headers['keep-alive']).toBeUndefined();
     });
 
     it('lets the upstream see Authorization, cookies and the request-id header', async () => {

@@ -4,7 +4,7 @@ import https from 'node:https';
 import type { LoggerPort } from '@application/ports';
 import { isSafeCorrelationId } from '@shared';
 import type { NextFunction, Request, Response } from 'express';
-import { buildForwardHeaders } from './forward-headers.util';
+import { buildForwardHeaders, stripHopByHopHeaders } from './forward-headers.util';
 import { matchesLegacyPrefix } from './matches-prefix.util';
 
 export type LegacyForwarderOptions = {
@@ -87,7 +87,9 @@ export class LegacyForwarder {
         });
 
         outbound.on('response', (upstream: IncomingMessage) => {
-            res.writeHead(upstream.statusCode ?? 502, upstream.headers);
+            // The status and body pass through untouched; the hop-by-hop headers do not, since
+            // they describe this app's connection to the legacy service, not the client's.
+            res.writeHead(upstream.statusCode ?? 502, stripHopByHopHeaders(upstream.headers));
             upstream.pipe(res);
         });
 

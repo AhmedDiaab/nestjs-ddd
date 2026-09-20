@@ -16,6 +16,22 @@ const HOP_BY_HOP_HEADERS = new Set([
     'trailer',
 ]);
 
+/**
+ * The same rule applied to the response on its way back: a header meaningful only between this
+ * app and the legacy service must not be repeated to the client. Forwarding `connection` or
+ * `keep-alive` describes a connection the client never had, and forwarding `transfer-encoding`
+ * or `upgrade` describes an encoding this hop is re-deciding for itself.
+ */
+export function stripHopByHopHeaders(headers: IncomingHttpHeaders): OutgoingHttpHeaders {
+    const kept: OutgoingHttpHeaders = {};
+
+    for (const [name, value] of Object.entries(headers)) {
+        if (value === undefined || HOP_BY_HOP_HEADERS.has(name.toLowerCase())) continue;
+        kept[name] = value;
+    }
+    return kept;
+}
+
 export type ForwardHeadersInput = {
     /** The inbound request's own headers (Node lower-cases every header name). */
     headers: IncomingHttpHeaders;
