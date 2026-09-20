@@ -19,6 +19,8 @@ export { type HttpConfig, httpSchema } from './http.schema';
 
 export { type IdempotencyConfig, idempotencySchema } from './idempotency.schema';
 
+export { type LegacyConfig, legacySchema } from './legacy.schema';
+
 export { type LoggingConfig, loggingSchema } from './logging.schema';
 
 export { type MetricsConfig, metricsSchema } from './metrics.schema';

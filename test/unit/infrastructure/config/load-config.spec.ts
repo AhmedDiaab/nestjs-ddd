@@ -148,6 +148,62 @@ describe('loadConfig', () => {
         });
     });
 
+    it('loads legacy config from env, defaulting to disabled', () => {
+        // Arrange: only BASE_ENV is set
+
+        // Act
+        const config = loadConfig();
+
+        // Assert
+        expect(config.legacy).toMatchObject({
+            forwardEnabled: false,
+            forwardPrefixes: [],
+            preserveHostHeader: false,
+        });
+    });
+
+    it('parses legacy overrides from env', () => {
+        // Arrange
+        process.env = {
+            ...BASE_ENV,
+            LEGACY_FORWARD_ENABLED: 'true',
+            LEGACY_TARGET_URL: 'http://legacy-host:8080',
+            LEGACY_FORWARD_PREFIXES: '/v1/orders, /v1/invoices',
+            LEGACY_TIMEOUT_MS: '2000',
+            LEGACY_PRESERVE_HOST_HEADER: 'true',
+        };
+
+        // Act
+        const config = loadConfig();
+
+        // Assert
+        expect(config.legacy).toMatchObject({
+            forwardEnabled: true,
+            targetUrl: 'http://legacy-host:8080',
+            forwardPrefixes: ['/v1/orders', '/v1/invoices'],
+            timeoutMs: 2000,
+            preserveHostHeader: true,
+        });
+    });
+
+    it('requires LEGACY_TARGET_URL and LEGACY_FORWARD_PREFIXES when LEGACY_FORWARD_ENABLED=true', () => {
+        // Arrange
+        process.env = { ...BASE_ENV, LEGACY_FORWARD_ENABLED: 'true' };
+
+        // Act
+        let error: unknown;
+        try {
+            loadConfig();
+        } catch (e) {
+            error = e;
+        }
+
+        // Assert
+        expect(error).toBeInstanceOf(InvalidConfigError);
+        expect((error as Error).message).toContain('LEGACY_TARGET_URL');
+        expect((error as Error).message).toContain('LEGACY_FORWARD_PREFIXES');
+    });
+
     it('requires TLS_KEY_FILE and TLS_CERT_FILE when TLS_ENABLED=true', () => {
         // Arrange
         process.env = { ...BASE_ENV, TLS_ENABLED: 'true' };
