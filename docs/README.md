@@ -31,6 +31,7 @@ Start here. Each link is one focused document.
 | Run it as a Windows service or wire a monitoring tool                          | [Operations](architecture/operations.md)                                          |
 | Scrape metrics, or follow one request across services                          | [Observability](architecture/observability.md)                                    |
 | Work on this repo with an AI agent                                             | [`AGENTS.md`](../AGENTS.md) and [Agentic development](agentic-development.md)     |
+| Contribute back to the template itself (setup, gate, commits, releases)        | [`CONTRIBUTING.md`](../CONTRIBUTING.md)                                           |
 | Know what the template does **not** do before adopting it                      | [Known gaps and open items](known-gaps.md)                                        |
 
 ## Reference
