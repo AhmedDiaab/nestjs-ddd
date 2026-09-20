@@ -9,6 +9,11 @@ stay easy to scan.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-20
+
+First tagged release. Nothing was tagged before it, so this version is the template as it
+stands today: the baseline it started from, plus everything the work of September 2026 added.
+
 ### Added
 
 - Repository hygiene: `LICENSE` (MIT), `CONTRIBUTING.md` and `.github/PULL_REQUEST_TEMPLATE.md`,
@@ -110,6 +115,36 @@ lower-case` rule, which compares the whole subject against its lower-cased self 
   [decision 0013](docs/decisions/0013-legacy-forwarder-is-dumb-transport.md) and
   `docs/architecture/configuration.md` § Legacy forwarding.
 
+Everything else the template already shipped:
+
+- Layered/DDD architecture (`interface → application → domain`, infrastructure behind ports)
+  enforced by ESLint import rules, `madge` cycle checks and typed DI tokens that make a wrong
+  binding fail to compile.
+- Domain building blocks (`Entity`, `ValueObject`, `AggregateRoot`, domain errors and events) and
+  use cases that return a typed `Result` for expected failures instead of throwing.
+- A multi-source database layer (Oracle implemented; other dialects placeholders) with pool
+  tuning, boot pings, a readiness probe, `transaction()` per call, a `UnitOfWorkPort` for
+  cross-aggregate atomicity, and the acting user carried as Oracle's `CLIENT_IDENTIFIER` per query.
+- Domain events published after the write commits to in-process handlers, with a written outbox
+  recipe for consumers that must not miss one.
+- An HTTP interface with a consistent `{ success, data, meta }` envelope, Zod-validated
+  request/response schemas, versioned routes, JWT auth enforced globally (`@Public()` opt-out,
+  `@Roles()` for token-carried roles), CSRF protection for cookie auth, and idempotency-key replay
+  for POSTs that need to be safe to retry.
+- Errors mapped to real HTTP statuses by problem kind, for both returned `Result` failures and
+  thrown errors, with internals and ORA codes never reaching clients.
+- Security defaults: helmet, a CORS allow-list, rate limiting shared through Redis across
+  instances, and body-size limits.
+- An outbound HTTP client (per-attempt timeout, safe-method retries, `Retry-After`, a circuit
+  breaker per upstream) and cron jobs that skip overlapping runs and drain cleanly on shutdown.
+- Observability: Prometheus metrics for HTTP/jobs/pools, W3C trace context propagated across
+  services, structured pino logging with redaction, and a graceful shutdown sequence that fails
+  readiness first and closes database pools last.
+- Unit, e2e, live-Oracle and Windows-service-script test suites, in-memory fakes, and one
+  `pnpm verify` gate that CI runs on every pull request alongside a coverage floor.
+- Agent-ready conventions: `AGENTS.md`, Claude Code skills, an architecture-reviewer subagent, and
+  enforced patterns (AAA tests, named barrel exports, one thing per file).
+
 ### Changed
 
 - `EnvConfigAdapter`'s constructor now optionally accepts an already-loaded `AppConfig`, so
@@ -175,40 +210,6 @@ lower-case` rule, which compares the whole subject against its lower-cased self 
   in their type declarations, and `@nest-lab/throttler-storage-redis@1.2.0` has no `@nestjs/common@^12`
   peer at all — upstream gaps, not something to patch around here. `.github/dependabot.yml` now
   ignores major bumps for `@nestjs/*` so the PR stops reopening weekly.
-
-## [1.0.0]
-
-Baseline: what this template ships out of the box.
-
-### Added
-
-- Layered/DDD architecture (`interface → application → domain`, infrastructure behind ports)
-  enforced by ESLint import rules, `madge` cycle checks and typed DI tokens that make a wrong
-  binding fail to compile.
-- Domain building blocks (`Entity`, `ValueObject`, `AggregateRoot`, domain errors and events) and
-  use cases that return a typed `Result` for expected failures instead of throwing.
-- A multi-source database layer (Oracle implemented; other dialects placeholders) with pool
-  tuning, boot pings, a readiness probe, `transaction()` per call, a `UnitOfWorkPort` for
-  cross-aggregate atomicity, and the acting user carried as Oracle's `CLIENT_IDENTIFIER` per query.
-- Domain events published after the write commits to in-process handlers, with a written outbox
-  recipe for consumers that must not miss one.
-- An HTTP interface with a consistent `{ success, data, meta }` envelope, Zod-validated
-  request/response schemas, versioned routes, JWT auth enforced globally (`@Public()` opt-out,
-  `@Roles()` for token-carried roles), CSRF protection for cookie auth, and idempotency-key replay
-  for POSTs that need to be safe to retry.
-- Errors mapped to real HTTP statuses by problem kind, for both returned `Result` failures and
-  thrown errors, with internals and ORA codes never reaching clients.
-- Security defaults: helmet, a CORS allow-list, rate limiting shared through Redis across
-  instances, and body-size limits.
-- An outbound HTTP client (per-attempt timeout, safe-method retries, `Retry-After`, a circuit
-  breaker per upstream) and cron jobs that skip overlapping runs and drain cleanly on shutdown.
-- Observability: Prometheus metrics for HTTP/jobs/pools, W3C trace context propagated across
-  services, structured pino logging with redaction, and a graceful shutdown sequence that fails
-  readiness first and closes database pools last.
-- Unit, e2e, live-Oracle and Windows-service-script test suites, in-memory fakes, and one
-  `pnpm verify` gate that CI runs on every pull request alongside a coverage floor.
-- Agent-ready conventions: `AGENTS.md`, Claude Code skills, an architecture-reviewer subagent, and
-  enforced patterns (AAA tests, named barrel exports, one thing per file).
 
 [Unreleased]: https://github.com/AhmedDiaab/nestjs-ddd/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/AhmedDiaab/nestjs-ddd/releases/tag/v1.0.0
