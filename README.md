@@ -60,6 +60,7 @@ docker compose --env-file .env.docker up --build
 
 **[docs/README.md](docs/README.md)** routes you to the right document:
 
+- [Onboarding](docs/onboarding.md): new to NestJS or to layered/DDD code? Start here — free reading, what this template forbids that tutorials teach, and a first-day path
 - [Glossary](docs/glossary.md): repository, DAO, query port, gateway, read model… and which to use
 - [Architecture overview](docs/architecture/overview.md): layers, rules, folder map, request lifecycle
 - [Feature walkthrough](docs/guides/feature-walkthrough.md): build a feature end to end, with step-by-step guides
